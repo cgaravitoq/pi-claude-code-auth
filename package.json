@@ -1,0 +1,28 @@
+{
+	"name": "pi-claude-code-auth",
+	"version": "0.1.0",
+	"description": "pi extension: authenticate the Anthropic provider via existing Claude Code OAuth credentials",
+	"type": "module",
+	"main": "dist/index.js",
+	"scripts": {
+		"build": "bun build src/index.ts --target=node --format=esm --outfile=dist/index.js --external @earendil-works/pi-ai --external @earendil-works/pi-coding-agent",
+		"install:pi": "bun run build && mkdir -p $HOME/.pi/agent/extensions/claude-code-auth && cp dist/index.js $HOME/.pi/agent/extensions/claude-code-auth/index.js && cp dist/package.json $HOME/.pi/agent/extensions/claude-code-auth/package.json 2>/dev/null || true",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@anthropic-ai/sdk": "^0.40.0"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-ai": "*",
+		"@earendil-works/pi-coding-agent": "*"
+	},
+	"devDependencies": {
+		"@earendil-works/pi-ai": "*",
+		"@earendil-works/pi-coding-agent": "*",
+		"@types/node": "^22.0.0",
+		"typescript": "^5.5.0"
+	},
+	"engines": {
+		"node": ">=22.19.0"
+	}
+}

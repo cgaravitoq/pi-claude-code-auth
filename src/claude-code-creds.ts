@@ -20,6 +20,8 @@ import {
 	existsSync,
 	mkdirSync,
 	readFileSync,
+	renameSync,
+	unlinkSync,
 	writeFileSync,
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
@@ -128,8 +130,20 @@ function writeBackToFile(creds: ClaudeCodeCreds): void {
 			expiresAt: creds.expiresAt,
 		},
 	};
-	writeFileSync(path, JSON.stringify(updated, null, 2), { encoding: "utf-8", mode: 0o600 });
-	if (process.platform !== "win32") chmodSync(path, 0o600);
+	// Atomic write: tmp file + rename. Stops partial reads from racing readers.
+	const tmp = `${path}.${process.pid}.${Date.now()}.tmp`;
+	try {
+		writeFileSync(tmp, JSON.stringify(updated, null, 2), { encoding: "utf-8", mode: 0o600 });
+		if (process.platform !== "win32") chmodSync(tmp, 0o600);
+		renameSync(tmp, path);
+	} catch (err) {
+		try {
+			unlinkSync(tmp);
+		} catch {
+			// already gone
+		}
+		throw err;
+	}
 }
 
 interface OAuthResponse {
@@ -169,28 +183,42 @@ function refreshViaCli(): void {
 	});
 }
 
-export async function refreshClaudeCodeCreds(current: ClaudeCodeCreds): Promise<ClaudeCodeCreds> {
-	if (current.expiresAt > Date.now() + 60_000) return current;
+// Module-level lock so concurrent callers reuse the same refresh promise
+// instead of all hitting the OAuth endpoint with the same refresh token
+// (Anthropic rotates the token on success — only the first caller would win).
+let inFlightRefresh: Promise<ClaudeCodeCreds> | null = null;
 
-	const oauth = await refreshViaOAuth(current.refreshToken).catch(() => null);
-	if (oauth && oauth.expiresAt > Date.now() + 60_000) {
+export function refreshClaudeCodeCreds(current: ClaudeCodeCreds): Promise<ClaudeCodeCreds> {
+	if (current.expiresAt > Date.now() + 60_000) return Promise.resolve(current);
+	if (inFlightRefresh) return inFlightRefresh;
+
+	inFlightRefresh = (async () => {
 		try {
-			writeBackToFile(oauth);
-		} catch {
-			// non-fatal
+			const oauth = await refreshViaOAuth(current.refreshToken).catch(() => null);
+			if (oauth && oauth.expiresAt > Date.now() + 60_000) {
+				try {
+					writeBackToFile(oauth);
+				} catch {
+					// non-fatal
+				}
+				return oauth;
+			}
+
+			try {
+				refreshViaCli();
+			} catch {
+				// fall through to read attempt
+			}
+			const reread = readClaudeCodeCreds();
+			if (reread && reread.expiresAt > Date.now() + 60_000) return reread;
+
+			throw new Error(
+				"Failed to refresh Claude Code credentials. Run `claude` once to re-authenticate.",
+			);
+		} finally {
+			inFlightRefresh = null;
 		}
-		return oauth;
-	}
+	})();
 
-	try {
-		refreshViaCli();
-	} catch {
-		// fall through to read attempt
-	}
-	const reread = readClaudeCodeCreds();
-	if (reread && reread.expiresAt > Date.now() + 60_000) return reread;
-
-	throw new Error(
-		"Failed to refresh Claude Code credentials. Run `claude` once to re-authenticate.",
-	);
+	return inFlightRefresh;
 }

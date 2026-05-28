@@ -20,6 +20,8 @@ import {
 	existsSync,
 	mkdirSync,
 	readFileSync,
+	renameSync,
+	unlinkSync,
 	writeFileSync,
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
@@ -128,8 +130,20 @@ function writeBackToFile(creds: ClaudeCodeCreds): void {
 			expiresAt: creds.expiresAt,
 		},
 	};
-	writeFileSync(path, JSON.stringify(updated, null, 2), { encoding: "utf-8", mode: 0o600 });
-	if (process.platform !== "win32") chmodSync(path, 0o600);
+	// Atomic write: tmp file + rename. Stops partial reads from racing readers.
+	const tmp = `${path}.${process.pid}.${Date.now()}.tmp`;
+	try {
+		writeFileSync(tmp, JSON.stringify(updated, null, 2), { encoding: "utf-8", mode: 0o600 });
+		if (process.platform !== "win32") chmodSync(tmp, 0o600);
+		renameSync(tmp, path);
+	} catch (err) {
+		try {
+			unlinkSync(tmp);
+		} catch {
+			// already gone
+		}
+		throw err;
+	}
 }
 
 interface OAuthResponse {
@@ -159,38 +173,74 @@ async function refreshViaOAuth(refreshToken: string): Promise<ClaudeCodeCreds | 
 	};
 }
 
-function refreshViaCli(): void {
-	execSync("claude -p . --model haiku", {
-		timeout: 60_000,
-		encoding: "utf-8",
-		env: { ...process.env, TERM: "dumb" },
-		stdio: "ignore",
-		cwd: tmpdir(),
-	});
+function claudeCliPath(): string | null {
+	const probe = process.platform === "win32" ? "where claude" : "command -v claude";
+	try {
+		const out = execSync(probe, { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"] })
+			.trim()
+			.split(/\r?\n/)[0];
+		return out || null;
+	} catch {
+		return null;
+	}
 }
 
-export async function refreshClaudeCodeCreds(current: ClaudeCodeCreds): Promise<ClaudeCodeCreds> {
-	if (current.expiresAt > Date.now() + 60_000) return current;
-
-	const oauth = await refreshViaOAuth(current.refreshToken).catch(() => null);
-	if (oauth && oauth.expiresAt > Date.now() + 60_000) {
-		try {
-			writeBackToFile(oauth);
-		} catch {
-			// non-fatal
-		}
-		return oauth;
-	}
-
+function refreshViaCli(): string | null {
+	const cli = claudeCliPath();
+	if (!cli) return "claude CLI not found on PATH";
 	try {
-		refreshViaCli();
-	} catch {
-		// fall through to read attempt
+		execSync(`${JSON.stringify(cli)} -p . --model haiku`, {
+			timeout: 20_000,
+			encoding: "utf-8",
+			env: { ...process.env, TERM: "dumb" },
+			// Capture stderr for diagnostics; suppress stdout (may contain
+			// model output we don't care about and don't want to log).
+			stdio: ["ignore", "ignore", "pipe"],
+			cwd: tmpdir(),
+		});
+		return null;
+	} catch (err) {
+		const e = err as { code?: string; signal?: string; stderr?: Buffer | string };
+		if (e.signal === "SIGTERM") return "claude CLI refresh timed out after 20s";
+		const stderr = typeof e.stderr === "string" ? e.stderr : e.stderr?.toString("utf-8") ?? "";
+		const firstLine = stderr.split(/\r?\n/).find((l) => l.trim());
+		return firstLine ? `claude CLI: ${firstLine}` : `claude CLI failed (${e.code ?? "unknown"})`;
 	}
-	const reread = readClaudeCodeCreds();
-	if (reread && reread.expiresAt > Date.now() + 60_000) return reread;
+}
 
-	throw new Error(
-		"Failed to refresh Claude Code credentials. Run `claude` once to re-authenticate.",
-	);
+// Module-level lock so concurrent callers reuse the same refresh promise
+// instead of all hitting the OAuth endpoint with the same refresh token
+// (Anthropic rotates the token on success — only the first caller would win).
+let inFlightRefresh: Promise<ClaudeCodeCreds> | null = null;
+
+export function refreshClaudeCodeCreds(current: ClaudeCodeCreds): Promise<ClaudeCodeCreds> {
+	if (current.expiresAt > Date.now() + 60_000) return Promise.resolve(current);
+	if (inFlightRefresh) return inFlightRefresh;
+
+	inFlightRefresh = (async () => {
+		try {
+			const oauth = await refreshViaOAuth(current.refreshToken).catch(() => null);
+			if (oauth && oauth.expiresAt > Date.now() + 60_000) {
+				try {
+					writeBackToFile(oauth);
+				} catch {
+					// non-fatal
+				}
+				return oauth;
+			}
+
+			const cliReason = refreshViaCli();
+			const reread = readClaudeCodeCreds();
+			if (reread && reread.expiresAt > Date.now() + 60_000) return reread;
+
+			const suffix = cliReason ? ` (${cliReason})` : "";
+			throw new Error(
+				`Failed to refresh Claude Code credentials${suffix}. Run \`claude\` once to re-authenticate.`,
+			);
+		} finally {
+			inFlightRefresh = null;
+		}
+	})();
+
+	return inFlightRefresh;
 }

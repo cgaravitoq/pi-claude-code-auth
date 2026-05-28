@@ -173,14 +173,39 @@ async function refreshViaOAuth(refreshToken: string): Promise<ClaudeCodeCreds | 
 	};
 }
 
-function refreshViaCli(): void {
-	execSync("claude -p . --model haiku", {
-		timeout: 60_000,
-		encoding: "utf-8",
-		env: { ...process.env, TERM: "dumb" },
-		stdio: "ignore",
-		cwd: tmpdir(),
-	});
+function claudeCliPath(): string | null {
+	const probe = process.platform === "win32" ? "where claude" : "command -v claude";
+	try {
+		const out = execSync(probe, { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"] })
+			.trim()
+			.split(/\r?\n/)[0];
+		return out || null;
+	} catch {
+		return null;
+	}
+}
+
+function refreshViaCli(): string | null {
+	const cli = claudeCliPath();
+	if (!cli) return "claude CLI not found on PATH";
+	try {
+		execSync(`${JSON.stringify(cli)} -p . --model haiku`, {
+			timeout: 20_000,
+			encoding: "utf-8",
+			env: { ...process.env, TERM: "dumb" },
+			// Capture stderr for diagnostics; suppress stdout (may contain
+			// model output we don't care about and don't want to log).
+			stdio: ["ignore", "ignore", "pipe"],
+			cwd: tmpdir(),
+		});
+		return null;
+	} catch (err) {
+		const e = err as { code?: string; signal?: string; stderr?: Buffer | string };
+		if (e.signal === "SIGTERM") return "claude CLI refresh timed out after 20s";
+		const stderr = typeof e.stderr === "string" ? e.stderr : e.stderr?.toString("utf-8") ?? "";
+		const firstLine = stderr.split(/\r?\n/).find((l) => l.trim());
+		return firstLine ? `claude CLI: ${firstLine}` : `claude CLI failed (${e.code ?? "unknown"})`;
+	}
 }
 
 // Module-level lock so concurrent callers reuse the same refresh promise
@@ -204,16 +229,13 @@ export function refreshClaudeCodeCreds(current: ClaudeCodeCreds): Promise<Claude
 				return oauth;
 			}
 
-			try {
-				refreshViaCli();
-			} catch {
-				// fall through to read attempt
-			}
+			const cliReason = refreshViaCli();
 			const reread = readClaudeCodeCreds();
 			if (reread && reread.expiresAt > Date.now() + 60_000) return reread;
 
+			const suffix = cliReason ? ` (${cliReason})` : "";
 			throw new Error(
-				"Failed to refresh Claude Code credentials. Run `claude` once to re-authenticate.",
+				`Failed to refresh Claude Code credentials${suffix}. Run \`claude\` once to re-authenticate.`,
 			);
 		} finally {
 			inFlightRefresh = null;

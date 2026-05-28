@@ -241,7 +241,6 @@ export function streamClaudeCodeAnthropic(
 
 			const client = new Anthropic({
 				baseURL: model.baseUrl,
-				dangerouslyAllowBrowser: true,
 				apiKey: null,
 				authToken: apiKey,
 				defaultHeaders: {

@@ -57,7 +57,7 @@ If you have never run `claude` on this machine, do that first. There is nothing 
 ## Installation
 
 ```sh
-pi install npm:pi-claude-code-auth
+pi install npm:@cgaravitoq/pi-claude-code-auth
 ```
 
 That's it. pi fetches the package, runs `npm install`, and registers the extension in `~/.pi/agent/settings.json`.

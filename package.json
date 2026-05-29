@@ -1,5 +1,5 @@
 {
-	"name": "pi-claude-code-auth",
+	"name": "@cgaravitoq/pi-claude-code-auth",
 	"version": "0.1.0",
 	"description": "pi extension: authenticate the Anthropic provider via your existing Claude Code OAuth session",
 	"type": "module",

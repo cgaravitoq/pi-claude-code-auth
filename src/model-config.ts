@@ -2,6 +2,12 @@ export interface ModelOverride {
   exclude?: string[]
   add?: string[]
   disableEffort?: boolean
+  /**
+   * Model requires the adaptive-thinking contract: `thinking: {type: "adaptive"}`
+   * plus `output_config.effort`. Manual `thinking: {type: "enabled", budget_tokens}`
+   * is rejected with a 400 on these models (Opus 4.8 and newer).
+   */
+  adaptiveThinking?: boolean
 }
 
 export interface ModelConfig {
@@ -35,6 +41,10 @@ export const config: ModelConfig = {
     },
     "4-7": {
       add: ["effort-2025-11-24"],
+    },
+    "4-8": {
+      add: ["effort-2025-11-24"],
+      adaptiveThinking: true,
     },
   },
 }

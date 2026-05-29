@@ -35,7 +35,13 @@ import {
 	computeBetas,
 	unprefixToolName,
 } from "./transforms.ts";
-import { config as ccConfig } from "./model-config.ts";
+import { config as ccConfig, getModelOverride } from "./model-config.ts";
+
+// Map pi's ThinkingLevel to a valid Anthropic effort. "minimal" is not an API
+// effort level; the API accepts low | medium | high | xhigh | max.
+function toEffort(level: string): string {
+	return level === "minimal" ? "low" : level;
+}
 
 // Claude Code tool names for OAuth stealth mode
 const claudeCodeTools = [
@@ -292,17 +298,24 @@ export function streamClaudeCodeAnthropic(
 
 			// Handle thinking/reasoning
 			if (options?.reasoning && model.reasoning) {
-				const defaultBudgets: Record<string, number> = {
-					minimal: 1024,
-					low: 4096,
-					medium: 10240,
-					high: 20480,
-				};
-				const customBudget = options.thinkingBudgets?.[options.reasoning as keyof typeof options.thinkingBudgets];
-				params.thinking = {
-					type: "enabled",
-					budget_tokens: customBudget ?? defaultBudgets[options.reasoning] ?? 10240,
-				};
+				if (getModelOverride(model.id)?.adaptiveThinking) {
+					// Adaptive-thinking models (Opus 4.8+): manual budget_tokens is
+					// rejected with a 400. Thinking depth is driven by effort instead.
+					params.thinking = { type: "adaptive" } as any;
+					(params as any).output_config = { effort: toEffort(options.reasoning) };
+				} else {
+					const defaultBudgets: Record<string, number> = {
+						minimal: 1024,
+						low: 4096,
+						medium: 10240,
+						high: 20480,
+					};
+					const customBudget = options.thinkingBudgets?.[options.reasoning as keyof typeof options.thinkingBudgets];
+					params.thinking = {
+						type: "enabled",
+						budget_tokens: customBudget ?? defaultBudgets[options.reasoning] ?? 10240,
+					};
+				}
 			}
 
 			// Reshape system + tools + messages so Anthropic accepts this as a

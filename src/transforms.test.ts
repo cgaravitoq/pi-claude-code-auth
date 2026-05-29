@@ -29,7 +29,10 @@ describe("tool transforms", () => {
 
 		expect(params.messages).toHaveLength(3);
 		expect(params.messages.map((message) => message.role)).toEqual(["user", "assistant", "user"]);
-		expect(params.messages[1]?.content).toEqual([{ type: "text", text: "" }]);
+		expect(params.messages[1]?.content).toEqual([{ type: "text", text: "(no content)" }]);
+		// The API rejects empty text blocks with 400; the placeholder must be non-empty.
+		const text = (params.messages[1]?.content[0] as { text: string }).text;
+		expect(text.trim().length).toBeGreaterThan(0);
 	});
 
 	test("replaces orphan tool_result with placeholder and preserves messages", () => {

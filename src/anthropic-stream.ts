@@ -140,7 +140,8 @@ function convertMessages(messages: Message[]): any[] {
 			}
 			if (blocks.length === 0) {
 				// Preserve role alternation when thinking blocks are stripped.
-				blocks.push({ type: "text", text: "" });
+				// Text must be non-empty: the API rejects empty text blocks with 400.
+				blocks.push({ type: "text", text: "(no content)" });
 			}
 			params.push({ role: "assistant", content: blocks });
 		} else if (msg.role === "toolResult") {

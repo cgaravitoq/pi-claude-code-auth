@@ -72,7 +72,7 @@ function repairToolPairs(messages: Message[]): Message[] {
 					content:
 						m.role === "user"
 							? [{ type: "text", text: "[tool result omitted]" }]
-							: [{ type: "text", text: "" }],
+							: [{ type: "text", text: "(no content)" }],
 				};
 			}
 			return { ...m, content: filtered };

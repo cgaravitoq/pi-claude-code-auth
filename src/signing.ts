@@ -12,7 +12,7 @@ interface Message {
  * Matches Claude Code's K19() function exactly: find the first message
  * with role "user", then return the text of its first text content block.
  */
-export function extractFirstUserMessageText(messages: Message[]): string {
+function extractFirstUserMessageText(messages: Message[]): string {
   const userMsg = messages.find((m) => m.role === "user")
   if (!userMsg) return ""
   const content = userMsg.content
@@ -29,7 +29,7 @@ export function extractFirstUserMessageText(messages: Message[]): string {
 /**
  * Compute cch: first 5 hex characters of SHA-256(messageText).
  */
-export function computeCch(messageText: string): string {
+function computeCch(messageText: string): string {
   return createHash("sha256").update(messageText).digest("hex").slice(0, 5)
 }
 
@@ -39,7 +39,7 @@ export function computeCch(messageText: string): string {
  * with "0" when the message is shorter), then hashes with the billing salt
  * and version string.
  */
-export function computeVersionSuffix(
+function computeVersionSuffix(
   messageText: string,
   version: string,
 ): string {

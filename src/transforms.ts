@@ -25,7 +25,7 @@ const TOOL_PREFIX = "mcp_";
 const SYSTEM_IDENTITY = "You are Claude Code, Anthropic's official CLI for Claude.";
 const BILLING_PREFIX = "x-anthropic-billing-header";
 
-export function prefixToolName(name: string): string {
+function prefixToolName(name: string): string {
 	return `${TOOL_PREFIX}${name.charAt(0).toUpperCase()}${name.slice(1)}`;
 }
 
@@ -35,8 +35,8 @@ export function unprefixToolName(name: string): string {
 	return rest.charAt(0).toLowerCase() + rest.slice(1);
 }
 
-type SystemEntry = { type?: string; text?: string; cache_control?: unknown } & Record<string, unknown>;
-type ContentBlock = { type?: string; text?: string; name?: string } & Record<string, unknown>;
+type SystemEntry = { type?: string; text?: string; cache_control?: unknown };
+type ContentBlock = { type?: string; text?: string; name?: string };
 type Message = { role?: string; content?: string | ContentBlock[] };
 
 function repairToolPairs(messages: Message[]): Message[] {
@@ -82,17 +82,14 @@ function repairToolPairs(messages: Message[]): Message[] {
 export interface ClaudeCodeParams {
 	model?: string;
 	system?: SystemEntry[] | string;
-	thinking?: Record<string, unknown>;
+	thinking?: object;
 	output_config?: unknown;
-	tools?: Array<{ name?: string } & Record<string, unknown>>;
+	tools?: Array<{ name?: string }>;
 	messages?: Message[];
 }
 
-/**
- * Mutate the Anthropic Messages params in place so they match the
- * Claude Code payload contract.
- */
-export function applyClaudeCodeTransforms(params: ClaudeCodeParams): void {
+/** Mutates and returns params. Do not call twice on the same object. */
+export function applyClaudeCodeTransforms<T extends ClaudeCodeParams>(params: T): T {
 	const version = process.env.ANTHROPIC_CLI_VERSION ?? config.ccVersion;
 	const entrypoint = process.env.CLAUDE_CODE_ENTRYPOINT ?? "sdk-cli";
 
@@ -170,7 +167,7 @@ export function applyClaudeCodeTransforms(params: ClaudeCodeParams): void {
 	// Strip effort for models that don't support it
 	const override = getModelOverride(params.model ?? "");
 	if (override?.disableEffort && params.thinking && "effort" in params.thinking) {
-		delete params.thinking.effort;
+		delete (params.thinking as { effort?: unknown }).effort;
 		if (!Object.keys(params.thinking).length) delete params.thinking;
 	}
 
@@ -198,4 +195,6 @@ export function applyClaudeCodeTransforms(params: ClaudeCodeParams): void {
 		});
 		params.messages = repairToolPairs(params.messages);
 	}
+
+	return params;
 }

@@ -96,7 +96,7 @@ function convertContentBlocks(
 	return blocks;
 }
 
-function convertMessages(messages: Message[], isOAuth: boolean, _tools?: Tool[]): any[] {
+function convertMessages(messages: Message[]): any[] {
 	const params: any[] = [];
 
 	for (let i = 0; i < messages.length; i++) {
@@ -133,7 +133,7 @@ function convertMessages(messages: Message[], isOAuth: boolean, _tools?: Tool[])
 					blocks.push({
 						type: "tool_use",
 						id: block.id,
-						name: isOAuth ? toClaudeCodeName(block.name) : block.name,
+						name: toClaudeCodeName(block.name),
 						input: block.arguments,
 					});
 				}
@@ -182,9 +182,9 @@ function convertMessages(messages: Message[], isOAuth: boolean, _tools?: Tool[])
 	return params;
 }
 
-function convertTools(tools: Tool[], isOAuth: boolean): any[] {
+function convertTools(tools: Tool[]): any[] {
 	return tools.map((tool) => ({
-		name: isOAuth ? toClaudeCodeName(tool.name) : tool.name,
+		name: toClaudeCodeName(tool.name),
 		description: tool.description,
 		input_schema: {
 			type: "object",
@@ -237,8 +237,6 @@ export function streamClaudeCodeAnthropic(
 
 		try {
 			const apiKey = options?.apiKey ?? "";
-			// Always OAuth — this extension only ever receives Claude Code OAuth tokens
-			const isOAuth = true;
 
 			const betas = computeBetas(model.id);
 			const version = process.env.ANTHROPIC_CLI_VERSION ?? ccConfig.ccVersion;
@@ -260,41 +258,31 @@ export function streamClaudeCodeAnthropic(
 			});
 
 			// Build request params
-			const params: MessageCreateParamsStreaming = {
+			let params: MessageCreateParamsStreaming = {
 				model: model.id,
-				messages: convertMessages(context.messages, isOAuth, context.tools),
+				messages: convertMessages(context.messages),
 				max_tokens: options?.maxTokens || Math.floor(model.maxTokens / 3),
 				stream: true,
 			};
 
 			// System prompt with Claude Code identity for OAuth
-			if (isOAuth) {
-				params.system = [
-					{
-						type: "text",
-						text: "You are Claude Code, Anthropic's official CLI for Claude.",
-						cache_control: { type: "ephemeral" },
-					},
-				];
-				if (context.systemPrompt) {
-					params.system.push({
-						type: "text",
-						text: sanitizeSurrogates(context.systemPrompt),
-						cache_control: { type: "ephemeral" },
-					});
-				}
-			} else if (context.systemPrompt) {
-				params.system = [
-					{
-						type: "text",
-						text: sanitizeSurrogates(context.systemPrompt),
-						cache_control: { type: "ephemeral" },
-					},
-				];
+			params.system = [
+				{
+					type: "text",
+					text: "You are Claude Code, Anthropic's official CLI for Claude.",
+					cache_control: { type: "ephemeral" },
+				},
+			];
+			if (context.systemPrompt) {
+				params.system.push({
+					type: "text",
+					text: sanitizeSurrogates(context.systemPrompt),
+					cache_control: { type: "ephemeral" },
+				});
 			}
 
 			if (context.tools) {
-				params.tools = convertTools(context.tools, isOAuth);
+				params.tools = convertTools(context.tools);
 			}
 
 			// Handle thinking/reasoning
@@ -324,7 +312,7 @@ export function streamClaudeCodeAnthropic(
 			// Reshape system + tools + messages so Anthropic accepts this as a
 			// legitimate Claude Code session (billing header, identity split,
 			// move 3rd-party system prompts to user, mcp_<PascalCase> tool names).
-			applyClaudeCodeTransforms(params as any);
+			params = applyClaudeCodeTransforms(params);
 
 			const anthropicStream = client.messages.stream({ ...params }, { signal: options?.signal });
 			stream.push({ type: "start", partial: output });

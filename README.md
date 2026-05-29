@@ -68,7 +68,7 @@ Inside pi:
 
 ```text
 /login claude-code
-/model claude-code/claude-opus-4-7
+/model claude-code/claude-opus-4-8
 ```
 
 `/login claude-code` materializes the discovered credentials into `~/.pi/agent/auth.json` (pi's own auth store). It does not open a browser — if no credentials are found it tells you to run `claude` first and aborts.
@@ -84,6 +84,7 @@ After that, switch models any time:
 
 | Model ID | Reasoning | Input | Context | Max output |
 |---|---|---|---|---|
+| `claude-opus-4-8` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 200k | 64k |
 | `claude-opus-4-7` | yes | text, image | 200k | 64k |
 | `claude-sonnet-4-6` | yes | text, image | 200k | 64k |
 | `claude-haiku-4-5` | no | text, image | 200k | 64k |

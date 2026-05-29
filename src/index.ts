@@ -66,8 +66,8 @@ export default function (pi: ExtensionAPI) {
 				reasoning: true,
 				input: ["text", "image"],
 				cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 },
-				contextWindow: 200000,
-				maxTokens: 64000,
+				contextWindow: 1000000,
+				maxTokens: 128000,
 			},
 			{
 				id: "claude-opus-4-7",
@@ -75,8 +75,8 @@ export default function (pi: ExtensionAPI) {
 				reasoning: true,
 				input: ["text", "image"],
 				cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 },
-				contextWindow: 200000,
-				maxTokens: 64000,
+				contextWindow: 1000000,
+				maxTokens: 128000,
 			},
 			{
 				id: "claude-sonnet-4-6",
@@ -84,8 +84,8 @@ export default function (pi: ExtensionAPI) {
 				reasoning: true,
 				input: ["text", "image"],
 				cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 },
-				contextWindow: 200000,
-				maxTokens: 64000,
+				contextWindow: 1000000,
+				maxTokens: 128000,
 			},
 			{
 				id: "claude-haiku-4-5",

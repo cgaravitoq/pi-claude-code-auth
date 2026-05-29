@@ -1,6 +1,7 @@
 export interface ModelOverride {
   readonly exclude?: readonly string[]
   readonly add?: readonly string[]
+  longContext?: boolean
   disableEffort?: boolean
   /**
    * Model requires the adaptive-thinking contract: `thinking: {type: "adaptive"}`
@@ -37,12 +38,16 @@ export const config: ModelConfig = {
       disableEffort: true,
     },
     "4-6": {
+      longContext: true,
       add: ["effort-2025-11-24"],
     },
     "4-7": {
+      longContext: true,
       add: ["effort-2025-11-24"],
+      adaptiveThinking: true,
     },
     "4-8": {
+      longContext: true,
       add: ["effort-2025-11-24"],
       adaptiveThinking: true,
     },
@@ -71,6 +76,7 @@ export function getModelOverride(modelId: string): ModelOverride | null {
 export function computeBetas(modelId: string): string[] {
   const override = getModelOverride(modelId);
   let betas = [...config.baseBetas];
+  if (override?.longContext) betas = [...betas, ...config.longContextBetas];
   if (override?.exclude) betas = betas.filter((b) => !override.exclude!.includes(b));
   if (override?.add) betas = [...betas, ...override.add];
   return Array.from(new Set(betas));

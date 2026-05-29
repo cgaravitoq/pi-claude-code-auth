@@ -84,9 +84,9 @@ After that, switch models any time:
 
 | Model ID | Reasoning | Input | Context | Max output |
 |---|---|---|---|---|
-| `claude-opus-4-8` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 200k | 64k |
-| `claude-opus-4-7` | yes | text, image | 200k | 64k |
-| `claude-sonnet-4-6` | yes | text, image | 200k | 64k |
+| `claude-opus-4-8` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
+| `claude-opus-4-7` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
+| `claude-sonnet-4-6` | yes | text, image | 1M | 128k |
 | `claude-haiku-4-5` | no | text, image | 200k | 64k |
 
 The cost numbers pi displays come from public pricing tables. Actual billing for Claude Code OAuth requests is governed by your subscription, not by per-token costs.
@@ -102,7 +102,7 @@ The cost numbers pi displays come from public pricing tables. Actual billing for
    - Prefixes every tool name with `mcp_<PascalCase>` (e.g. `read` → `mcp_Read`) and rewrites `tool_use` blocks in history accordingly.
    - Strips `thinking.effort` for haiku.
    - Filters orphan `tool_use` / `tool_result` pairs.
-4. **Headers** (`src/anthropic-stream.ts`) — sends `anthropic-beta` (computed from `src/model-config.ts`), `user-agent`, `x-app: cli`, and `anthropic-dangerous-direct-browser-access: true`.
+4. **Headers** (`src/anthropic-stream.ts`) — sends `anthropic-beta` (computed from `src/model-config.ts`, including `context-1m-2025-08-07` for Opus 4.8, Opus 4.7, and Sonnet 4.6), `user-agent`, `x-app: cli`, and `anthropic-dangerous-direct-browser-access: true`.
 5. **Thinking blocks** — assistant `thinking` blocks from previous turns are dropped before send. The signature is bound to the original turn and cannot be revalidated; re-sending it causes the API to reject the request.
 
 ## Environment variables

@@ -1,6 +1,6 @@
 export interface ModelOverride {
-  exclude?: string[]
-  add?: string[]
+  readonly exclude?: readonly string[]
+  readonly add?: readonly string[]
   disableEffort?: boolean
   /**
    * Model requires the adaptive-thinking contract: `thinking: {type: "adaptive"}`
@@ -12,9 +12,9 @@ export interface ModelOverride {
 
 export interface ModelConfig {
   ccVersion: string
-  baseBetas: string[]
-  longContextBetas: string[]
-  modelOverrides: Record<string, ModelOverride>
+  readonly baseBetas: readonly string[]
+  readonly longContextBetas: readonly string[]
+  readonly modelOverrides: Readonly<Record<string, ModelOverride>>
 }
 
 export const config: ModelConfig = {
@@ -64,3 +64,17 @@ export function getModelOverride(modelId: string): ModelOverride | null {
   }
   return null
 }
+
+/**
+ * Compute the betas to send for a given model, honoring per-model overrides.
+ */
+export function computeBetas(modelId: string): string[] {
+  const override = getModelOverride(modelId);
+  let betas = [...config.baseBetas];
+  if (override?.exclude) betas = betas.filter((b) => !override.exclude!.includes(b));
+  if (override?.add) betas = [...betas, ...override.add];
+  return Array.from(new Set(betas));
+}
+
+Object.values(config.modelOverrides).forEach(Object.freeze)
+Object.freeze(config)

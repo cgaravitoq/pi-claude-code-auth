@@ -83,6 +83,7 @@ export interface ClaudeCodeParams {
 	model?: string;
 	system?: SystemEntry[] | string;
 	thinking?: Record<string, unknown>;
+	output_config?: unknown;
 	tools?: Array<{ name?: string } & Record<string, unknown>>;
 	messages?: Message[];
 }
@@ -197,15 +198,4 @@ export function applyClaudeCodeTransforms(params: ClaudeCodeParams): void {
 		});
 		params.messages = repairToolPairs(params.messages);
 	}
-}
-
-/**
- * Compute the betas to send for a given model, honoring per-model overrides.
- */
-export function computeBetas(modelId: string): string[] {
-	const override = getModelOverride(modelId);
-	let betas = [...config.baseBetas];
-	if (override?.exclude) betas = betas.filter((b) => !override.exclude!.includes(b));
-	if (override?.add) betas = [...betas, ...override.add];
-	return betas;
 }

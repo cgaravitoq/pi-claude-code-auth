@@ -32,10 +32,9 @@ import {
 
 import {
 	applyClaudeCodeTransforms,
-	computeBetas,
 	unprefixToolName,
 } from "./transforms.ts";
-import { config as ccConfig, getModelOverride } from "./model-config.ts";
+import { computeBetas, config as ccConfig, getModelOverride } from "./model-config.ts";
 
 // Map pi's ThinkingLevel to a valid Anthropic effort. "minimal" is not an API
 // effort level; the API accepts low | medium | high | xhigh | max.
@@ -311,6 +310,8 @@ export function streamClaudeCodeAnthropic(
 						low: 4096,
 						medium: 10240,
 						high: 20480,
+						xhigh: 32768,
+						max: 64000,
 					};
 					const customBudget = options.thinkingBudgets?.[options.reasoning as keyof typeof options.thinkingBudgets];
 					params.thinking = {

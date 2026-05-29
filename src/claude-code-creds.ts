@@ -64,28 +64,37 @@ function parseBlob(raw: string): ClaudeCodeCreds | null {
 	return { accessToken: access, refreshToken: refresh, expiresAt: expires };
 }
 
+function isExecTimeout(err: unknown): boolean {
+	const e = err as { code?: string; signal?: string; name?: string };
+	return e.code === "ETIMEDOUT" || e.signal === "SIGTERM" || e.name === "TimeoutError";
+}
+
 function readFromKeychain(): ClaudeCodeCreds | null {
 	if (process.platform !== "darwin") return null;
 	const services = ["Claude Code-credentials"];
 	try {
 		const dump = execSync('security dump-keychain 2>/dev/null | grep -o \'"Claude Code-credentials[^"]*"\'', {
 			encoding: "utf-8",
+			timeout: 5_000,
 		});
 		const found = Array.from(
 			new Set(dump.split("\n").map((s) => s.replace(/"/g, "").trim()).filter(Boolean)),
 		);
 		if (found.length > 0) services.splice(0, services.length, ...found);
-	} catch {
+	} catch (err) {
+		if (isExecTimeout(err)) return null;
 		// fall back to default
 	}
 	for (const svc of services) {
 		try {
 			const out = execSync(`security find-generic-password -s ${JSON.stringify(svc)} -w`, {
 				encoding: "utf-8",
+				timeout: 5_000,
 			}).trim();
 			const creds = parseBlob(out);
 			if (creds) return creds;
-		} catch {
+		} catch (err) {
+			if (isExecTimeout(err)) return null;
 			// try next service
 		}
 	}
@@ -149,7 +158,7 @@ function writeBackToFile(creds: ClaudeCodeCreds): void {
 interface OAuthResponse {
 	access_token?: string;
 	refresh_token?: string;
-	expires_in?: number;
+	expires_in?: number | string;
 }
 
 async function refreshViaOAuth(refreshToken: string): Promise<ClaudeCodeCreds | null> {
@@ -166,11 +175,17 @@ async function refreshViaOAuth(refreshToken: string): Promise<ClaudeCodeCreds | 
 	if (!res.ok) return null;
 	const data = (await res.json()) as OAuthResponse;
 	if (!data.access_token) return null;
+	const ttlSec = Number(data.expires_in);
 	return {
 		accessToken: data.access_token,
 		refreshToken: data.refresh_token ?? refreshToken,
-		expiresAt: Date.now() + (data.expires_in ?? 36_000) * 1000,
+		expiresAt: Date.now() + (Number.isFinite(ttlSec) && ttlSec > 0 ? ttlSec : 36_000) * 1000,
 	};
+}
+
+function stringifyRefreshError(err: unknown): string {
+	const message = err instanceof Error ? err.message : String(err);
+	return message.length > 200 ? `${message.slice(0, 200)}...` : message;
 }
 
 function claudeCliPath(): string | null {
@@ -219,7 +234,11 @@ export function refreshClaudeCodeCreds(current: ClaudeCodeCreds): Promise<Claude
 
 	inFlightRefresh = (async () => {
 		try {
-			const oauth = await refreshViaOAuth(current.refreshToken).catch(() => null);
+			let oauthError: unknown;
+			const oauth = await refreshViaOAuth(current.refreshToken).catch((e) => {
+				oauthError = e;
+				return null;
+			});
 			if (oauth && oauth.expiresAt > Date.now() + 60_000) {
 				try {
 					writeBackToFile(oauth);
@@ -233,7 +252,10 @@ export function refreshClaudeCodeCreds(current: ClaudeCodeCreds): Promise<Claude
 			const reread = readClaudeCodeCreds();
 			if (reread && reread.expiresAt > Date.now() + 60_000) return reread;
 
-			const suffix = cliReason ? ` (${cliReason})` : "";
+			const reasons = [cliReason, oauthError ? `OAuth: ${stringifyRefreshError(oauthError)}` : null].filter(
+				Boolean,
+			);
+			const suffix = reasons.length > 0 ? ` (${reasons.join("; ")})` : "";
 			throw new Error(
 				`Failed to refresh Claude Code credentials${suffix}. Run \`claude\` once to re-authenticate.`,
 			);

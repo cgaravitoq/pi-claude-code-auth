@@ -32,10 +32,9 @@ import {
 
 import {
 	applyClaudeCodeTransforms,
-	computeBetas,
 	unprefixToolName,
 } from "./transforms.ts";
-import { config as ccConfig, getModelOverride } from "./model-config.ts";
+import { computeBetas, config as ccConfig, getModelOverride } from "./model-config.ts";
 
 // Map pi's ThinkingLevel to a valid Anthropic effort. "minimal" is not an API
 // effort level; the API accepts low | medium | high | xhigh | max.
@@ -97,7 +96,7 @@ function convertContentBlocks(
 	return blocks;
 }
 
-function convertMessages(messages: Message[], isOAuth: boolean, _tools?: Tool[]): any[] {
+function convertMessages(messages: Message[]): any[] {
 	const params: any[] = [];
 
 	for (let i = 0; i < messages.length; i++) {
@@ -134,14 +133,17 @@ function convertMessages(messages: Message[], isOAuth: boolean, _tools?: Tool[])
 					blocks.push({
 						type: "tool_use",
 						id: block.id,
-						name: isOAuth ? toClaudeCodeName(block.name) : block.name,
+						name: toClaudeCodeName(block.name),
 						input: block.arguments,
 					});
 				}
 			}
-			if (blocks.length > 0) {
-				params.push({ role: "assistant", content: blocks });
+			if (blocks.length === 0) {
+				// Preserve role alternation when thinking blocks are stripped.
+				// Text must be non-empty: the API rejects empty text blocks with 400.
+				blocks.push({ type: "text", text: "(no content)" });
 			}
+			params.push({ role: "assistant", content: blocks });
 		} else if (msg.role === "toolResult") {
 			const toolResults: any[] = [];
 			toolResults.push({
@@ -181,9 +183,9 @@ function convertMessages(messages: Message[], isOAuth: boolean, _tools?: Tool[])
 	return params;
 }
 
-function convertTools(tools: Tool[], isOAuth: boolean): any[] {
+function convertTools(tools: Tool[]): any[] {
 	return tools.map((tool) => ({
-		name: isOAuth ? toClaudeCodeName(tool.name) : tool.name,
+		name: toClaudeCodeName(tool.name),
 		description: tool.description,
 		input_schema: {
 			type: "object",
@@ -236,8 +238,6 @@ export function streamClaudeCodeAnthropic(
 
 		try {
 			const apiKey = options?.apiKey ?? "";
-			// Always OAuth — this extension only ever receives Claude Code OAuth tokens
-			const isOAuth = true;
 
 			const betas = computeBetas(model.id);
 			const version = process.env.ANTHROPIC_CLI_VERSION ?? ccConfig.ccVersion;
@@ -259,41 +259,31 @@ export function streamClaudeCodeAnthropic(
 			});
 
 			// Build request params
-			const params: MessageCreateParamsStreaming = {
+			let params: MessageCreateParamsStreaming = {
 				model: model.id,
-				messages: convertMessages(context.messages, isOAuth, context.tools),
+				messages: convertMessages(context.messages),
 				max_tokens: options?.maxTokens || Math.floor(model.maxTokens / 3),
 				stream: true,
 			};
 
 			// System prompt with Claude Code identity for OAuth
-			if (isOAuth) {
-				params.system = [
-					{
-						type: "text",
-						text: "You are Claude Code, Anthropic's official CLI for Claude.",
-						cache_control: { type: "ephemeral" },
-					},
-				];
-				if (context.systemPrompt) {
-					params.system.push({
-						type: "text",
-						text: sanitizeSurrogates(context.systemPrompt),
-						cache_control: { type: "ephemeral" },
-					});
-				}
-			} else if (context.systemPrompt) {
-				params.system = [
-					{
-						type: "text",
-						text: sanitizeSurrogates(context.systemPrompt),
-						cache_control: { type: "ephemeral" },
-					},
-				];
+			params.system = [
+				{
+					type: "text",
+					text: "You are Claude Code, Anthropic's official CLI for Claude.",
+					cache_control: { type: "ephemeral" },
+				},
+			];
+			if (context.systemPrompt) {
+				params.system.push({
+					type: "text",
+					text: sanitizeSurrogates(context.systemPrompt),
+					cache_control: { type: "ephemeral" },
+				});
 			}
 
 			if (context.tools) {
-				params.tools = convertTools(context.tools, isOAuth);
+				params.tools = convertTools(context.tools);
 			}
 
 			// Handle thinking/reasoning
@@ -309,6 +299,8 @@ export function streamClaudeCodeAnthropic(
 						low: 4096,
 						medium: 10240,
 						high: 20480,
+						xhigh: 32768,
+						max: 64000,
 					};
 					const customBudget = options.thinkingBudgets?.[options.reasoning as keyof typeof options.thinkingBudgets];
 					params.thinking = {
@@ -321,13 +313,35 @@ export function streamClaudeCodeAnthropic(
 			// Reshape system + tools + messages so Anthropic accepts this as a
 			// legitimate Claude Code session (billing header, identity split,
 			// move 3rd-party system prompts to user, mcp_<PascalCase> tool names).
-			applyClaudeCodeTransforms(params as any);
+			params = applyClaudeCodeTransforms(params);
 
 			const anthropicStream = client.messages.stream({ ...params }, { signal: options?.signal });
 			stream.push({ type: "start", partial: output });
 
-			type Block = (ThinkingContent | TextContent | (ToolCall & { partialJson: string })) & { index: number };
+			type Block = (ThinkingContent | TextContent | (ToolCall & { partialJson: string })) & {
+				index: number;
+				argumentsParseError?: string;
+				argumentsParseErrorWarned?: boolean;
+			};
 			const blocks = output.content as Block[];
+			const parseToolCallArguments = (block: Block) => {
+				if (block.type !== "toolCall") return;
+				try {
+					block.arguments = JSON.parse(block.partialJson);
+					delete block.argumentsParseError;
+				} catch (err) {
+					block.arguments = {};
+					block.argumentsParseError = String(err);
+					if (!block.argumentsParseErrorWarned) {
+						console.warn("Failed to parse tool_use partialJson", {
+							id: block.id,
+							name: block.name,
+							partialJson: block.partialJson.slice(0, 200),
+						});
+						block.argumentsParseErrorWarned = true;
+					}
+				}
+			};
 
 			for await (const event of anthropicStream) {
 				if (event.type === "message_start") {
@@ -383,9 +397,7 @@ export function streamClaudeCodeAnthropic(
 						});
 					} else if (event.delta.type === "input_json_delta" && block.type === "toolCall") {
 						(block as any).partialJson += event.delta.partial_json;
-						try {
-							block.arguments = JSON.parse((block as any).partialJson);
-						} catch {}
+						parseToolCallArguments(block);
 						stream.push({
 							type: "toolcall_delta",
 							contentIndex: index,
@@ -406,28 +418,22 @@ export function streamClaudeCodeAnthropic(
 					} else if (block.type === "thinking") {
 						stream.push({ type: "thinking_end", contentIndex: index, content: block.thinking, partial: output });
 					} else if (block.type === "toolCall") {
-						try {
-							block.arguments = JSON.parse((block as any).partialJson);
-						} catch {}
+						parseToolCallArguments(block);
 						delete (block as any).partialJson;
+						delete (block as any).argumentsParseErrorWarned;
 						stream.push({ type: "toolcall_end", contentIndex: index, toolCall: block, partial: output });
 					}
 				} else if (event.type === "message_delta") {
 					if ((event.delta as any).stop_reason) {
 						output.stopReason = mapStopReason((event.delta as any).stop_reason);
 					}
-					output.usage.input = (event.usage as any).input_tokens || 0;
-					output.usage.output = (event.usage as any).output_tokens || 0;
-					output.usage.cacheRead = (event.usage as any).cache_read_input_tokens || 0;
-					output.usage.cacheWrite = (event.usage as any).cache_creation_input_tokens || 0;
+					if (typeof (event.usage as any).output_tokens === "number") {
+						output.usage.output = (event.usage as any).output_tokens;
+					}
 					output.usage.totalTokens =
 						output.usage.input + output.usage.output + output.usage.cacheRead + output.usage.cacheWrite;
 					calculateCost(model, output.usage);
 				}
-			}
-
-			if (options?.signal?.aborted) {
-				throw new Error("Request was aborted");
 			}
 
 			stream.push({ type: "done", reason: output.stopReason as "stop" | "length" | "toolUse", message: output });

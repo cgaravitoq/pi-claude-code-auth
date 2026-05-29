@@ -13,7 +13,7 @@
  *   3. Move all other system content into the first user message
  *   4. Prefix every tool name with `mcp_<PascalCase>` (Claude Code convention)
  *   5. Strip `effort` for haiku
- *   6. Filter orphan tool_use/tool_result pairs
+ *   6. Filter orphan tool_use/tool_result pairs while preserving message order and role alternation
  *
  * Adapted from griffinmartin/opencode-claude-auth/src/transforms.ts.
  */
@@ -25,7 +25,7 @@ const TOOL_PREFIX = "mcp_";
 const SYSTEM_IDENTITY = "You are Claude Code, Anthropic's official CLI for Claude.";
 const BILLING_PREFIX = "x-anthropic-billing-header";
 
-export function prefixToolName(name: string): string {
+function prefixToolName(name: string): string {
 	return `${TOOL_PREFIX}${name.charAt(0).toUpperCase()}${name.slice(1)}`;
 }
 
@@ -35,8 +35,8 @@ export function unprefixToolName(name: string): string {
 	return rest.charAt(0).toLowerCase() + rest.slice(1);
 }
 
-type SystemEntry = { type?: string; text?: string; cache_control?: unknown } & Record<string, unknown>;
-type ContentBlock = { type?: string; text?: string; name?: string } & Record<string, unknown>;
+type SystemEntry = { type?: string; text?: string; cache_control?: unknown };
+type ContentBlock = { type?: string; text?: string; name?: string };
 type Message = { role?: string; content?: string | ContentBlock[] };
 
 function repairToolPairs(messages: Message[]): Message[] {
@@ -66,24 +66,30 @@ function repairToolPairs(messages: Message[]): Message[] {
 				if (b.type === "tool_result" && typeof toolUseId === "string") return !orphanedResults.has(toolUseId);
 				return true;
 			});
+			if (filtered.length === 0) {
+				return {
+					...m,
+					content:
+						m.role === "user"
+							? [{ type: "text", text: "[tool result omitted]" }]
+							: [{ type: "text", text: "(no content)" }],
+				};
+			}
 			return { ...m, content: filtered };
-		})
-		.filter((m) => !(Array.isArray(m.content) && m.content.length === 0));
+		});
 }
 
 export interface ClaudeCodeParams {
 	model?: string;
 	system?: SystemEntry[] | string;
-	thinking?: Record<string, unknown>;
-	tools?: Array<{ name?: string } & Record<string, unknown>>;
+	thinking?: object;
+	output_config?: unknown;
+	tools?: Array<{ name?: string }>;
 	messages?: Message[];
 }
 
-/**
- * Mutate the Anthropic Messages params in place so they match the
- * Claude Code payload contract.
- */
-export function applyClaudeCodeTransforms(params: ClaudeCodeParams): void {
+/** Mutates and returns params. Do not call twice on the same object. */
+export function applyClaudeCodeTransforms<T extends ClaudeCodeParams>(params: T): T {
 	const version = process.env.ANTHROPIC_CLI_VERSION ?? config.ccVersion;
 	const entrypoint = process.env.CLAUDE_CODE_ENTRYPOINT ?? "sdk-cli";
 
@@ -161,7 +167,7 @@ export function applyClaudeCodeTransforms(params: ClaudeCodeParams): void {
 	// Strip effort for models that don't support it
 	const override = getModelOverride(params.model ?? "");
 	if (override?.disableEffort && params.thinking && "effort" in params.thinking) {
-		delete params.thinking.effort;
+		delete (params.thinking as { effort?: unknown }).effort;
 		if (!Object.keys(params.thinking).length) delete params.thinking;
 	}
 
@@ -189,15 +195,6 @@ export function applyClaudeCodeTransforms(params: ClaudeCodeParams): void {
 		});
 		params.messages = repairToolPairs(params.messages);
 	}
-}
 
-/**
- * Compute the betas to send for a given model, honoring per-model overrides.
- */
-export function computeBetas(modelId: string): string[] {
-	const override = getModelOverride(modelId);
-	let betas = [...config.baseBetas];
-	if (override?.exclude) betas = betas.filter((b) => !override.exclude!.includes(b));
-	if (override?.add) betas = [...betas, ...override.add];
-	return betas;
+	return params;
 }

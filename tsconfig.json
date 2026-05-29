@@ -11,7 +11,7 @@
 		"resolveJsonModule": true,
 		"isolatedModules": true,
 		"verbatimModuleSyntax": false,
-		"types": ["node"]
+		"types": ["node", "bun"]
 	},
 	"include": ["src/**/*.ts"]
 }

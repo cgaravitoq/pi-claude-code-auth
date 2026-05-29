@@ -13,7 +13,7 @@
  *   3. Move all other system content into the first user message
  *   4. Prefix every tool name with `mcp_<PascalCase>` (Claude Code convention)
  *   5. Strip `effort` for haiku
- *   6. Filter orphan tool_use/tool_result pairs
+ *   6. Filter orphan tool_use/tool_result pairs while preserving message order and role alternation
  *
  * Adapted from griffinmartin/opencode-claude-auth/src/transforms.ts.
  */
@@ -66,9 +66,17 @@ function repairToolPairs(messages: Message[]): Message[] {
 				if (b.type === "tool_result" && typeof toolUseId === "string") return !orphanedResults.has(toolUseId);
 				return true;
 			});
+			if (filtered.length === 0) {
+				return {
+					...m,
+					content:
+						m.role === "user"
+							? [{ type: "text", text: "[tool result omitted]" }]
+							: [{ type: "text", text: "" }],
+				};
+			}
 			return { ...m, content: filtered };
-		})
-		.filter((m) => !(Array.isArray(m.content) && m.content.length === 0));
+		});
 }
 
 export interface ClaudeCodeParams {

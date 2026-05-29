@@ -139,9 +139,11 @@ function convertMessages(messages: Message[], isOAuth: boolean, _tools?: Tool[])
 					});
 				}
 			}
-			if (blocks.length > 0) {
-				params.push({ role: "assistant", content: blocks });
+			if (blocks.length === 0) {
+				// Preserve role alternation when thinking blocks are stripped.
+				blocks.push({ type: "text", text: "" });
 			}
+			params.push({ role: "assistant", content: blocks });
 		} else if (msg.role === "toolResult") {
 			const toolResults: any[] = [];
 			toolResults.push({
@@ -326,8 +328,30 @@ export function streamClaudeCodeAnthropic(
 			const anthropicStream = client.messages.stream({ ...params }, { signal: options?.signal });
 			stream.push({ type: "start", partial: output });
 
-			type Block = (ThinkingContent | TextContent | (ToolCall & { partialJson: string })) & { index: number };
+			type Block = (ThinkingContent | TextContent | (ToolCall & { partialJson: string })) & {
+				index: number;
+				argumentsParseError?: string;
+				argumentsParseErrorWarned?: boolean;
+			};
 			const blocks = output.content as Block[];
+			const parseToolCallArguments = (block: Block) => {
+				if (block.type !== "toolCall") return;
+				try {
+					block.arguments = JSON.parse(block.partialJson);
+					delete block.argumentsParseError;
+				} catch (err) {
+					block.arguments = {};
+					block.argumentsParseError = String(err);
+					if (!block.argumentsParseErrorWarned) {
+						console.warn("Failed to parse tool_use partialJson", {
+							id: block.id,
+							name: block.name,
+							partialJson: block.partialJson.slice(0, 200),
+						});
+						block.argumentsParseErrorWarned = true;
+					}
+				}
+			};
 
 			for await (const event of anthropicStream) {
 				if (event.type === "message_start") {
@@ -383,9 +407,7 @@ export function streamClaudeCodeAnthropic(
 						});
 					} else if (event.delta.type === "input_json_delta" && block.type === "toolCall") {
 						(block as any).partialJson += event.delta.partial_json;
-						try {
-							block.arguments = JSON.parse((block as any).partialJson);
-						} catch {}
+						parseToolCallArguments(block);
 						stream.push({
 							type: "toolcall_delta",
 							contentIndex: index,
@@ -406,28 +428,22 @@ export function streamClaudeCodeAnthropic(
 					} else if (block.type === "thinking") {
 						stream.push({ type: "thinking_end", contentIndex: index, content: block.thinking, partial: output });
 					} else if (block.type === "toolCall") {
-						try {
-							block.arguments = JSON.parse((block as any).partialJson);
-						} catch {}
+						parseToolCallArguments(block);
 						delete (block as any).partialJson;
+						delete (block as any).argumentsParseErrorWarned;
 						stream.push({ type: "toolcall_end", contentIndex: index, toolCall: block, partial: output });
 					}
 				} else if (event.type === "message_delta") {
 					if ((event.delta as any).stop_reason) {
 						output.stopReason = mapStopReason((event.delta as any).stop_reason);
 					}
-					output.usage.input = (event.usage as any).input_tokens || 0;
-					output.usage.output = (event.usage as any).output_tokens || 0;
-					output.usage.cacheRead = (event.usage as any).cache_read_input_tokens || 0;
-					output.usage.cacheWrite = (event.usage as any).cache_creation_input_tokens || 0;
+					if (typeof (event.usage as any).output_tokens === "number") {
+						output.usage.output = (event.usage as any).output_tokens;
+					}
 					output.usage.totalTokens =
 						output.usage.input + output.usage.output + output.usage.cacheRead + output.usage.cacheWrite;
 					calculateCost(model, output.usage);
 				}
-			}
-
-			if (options?.signal?.aborted) {
-				throw new Error("Request was aborted");
 			}
 
 			stream.push({ type: "done", reason: output.stopReason as "stop" | "length" | "toolUse", message: output });

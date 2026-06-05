@@ -7,7 +7,7 @@
  * (or macOS Keychain) and refreshes the token transparently.
  *
  * Activation:
- *   1. Drop this build into `~/.pi/agent/extensions/`
+ *   1. Install with `pi install npm:@cgaravitoq/pi-claude-code-auth`
  *   2. Run `pi`, then `/login claude-code` to materialize credentials into
  *      `~/.pi/agent/auth.json`
  *   3. Pick a model with `/model claude-code/<id>`

@@ -1,6 +1,6 @@
 {
 	"name": "@cgaravitoq/pi-claude-code-auth",
-	"version": "2.1.0",
+	"version": "2.2.0",
 	"description": "pi extension: authenticate the Anthropic provider via your existing Claude Code OAuth session",
 	"type": "module",
 	"license": "MIT",
@@ -39,7 +39,7 @@
 	},
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.40.0",
-		"@cgaravitoq/claude-code-core": "file:../claude-code-core"
+		"@cgaravitoq/claude-code-core": "^0.1.0"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-ai": "*",

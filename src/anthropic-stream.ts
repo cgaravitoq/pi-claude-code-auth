@@ -32,9 +32,11 @@ import {
 
 import {
 	applyClaudeCodeTransforms,
+	computeBetas,
+	config as ccConfig,
+	getModelOverride,
 	unprefixToolName,
-} from "./transforms.ts";
-import { computeBetas, config as ccConfig, getModelOverride } from "./model-config.ts";
+} from "@cgaravitoq/claude-code-core";
 
 // Map pi's ThinkingLevel to a valid Anthropic effort. "minimal" is not an API
 // effort level; the API accepts low | medium | high | xhigh | max.

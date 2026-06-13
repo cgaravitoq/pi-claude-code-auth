@@ -32,12 +32,14 @@
 		"README.md"
 	],
 	"scripts": {
-		"build": "bun build src/index.ts --target=node --format=esm --outfile=dist/index.js --external @earendil-works/pi-ai --external @earendil-works/pi-coding-agent",
+		"build": "bun build src/index.ts --target=node --format=esm --outfile=dist/index.js --external @earendil-works/pi-ai --external @earendil-works/pi-coding-agent --external @cgaravitoq/claude-code-core",
+		"test": "bun test",
 		"typecheck": "tsc --noEmit",
 		"prepublishOnly": "bun run typecheck"
 	},
 	"dependencies": {
-		"@anthropic-ai/sdk": "^0.40.0"
+		"@anthropic-ai/sdk": "^0.40.0",
+		"@cgaravitoq/claude-code-core": "file:../claude-code-core"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-ai": "*",

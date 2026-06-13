@@ -1,0 +1,32 @@
+{
+	"$schema": "https://btca.dev/btca.schema.json",
+	"dataDirectory": ".btca",
+	"resources": [
+		{
+			"name": "pi-claude-code-auth",
+			"type": "git",
+			"url": "https://github.com/cgaravitoq/pi-claude-code-auth",
+			"branch": "main",
+			"specialNotes": "This repo: a Pi extension (pi.registerProvider) exposing the Claude Code OAuth subscription as an Anthropic provider inside Pi. src/index.ts (provider + oauth wiring), src/anthropic-stream.ts (Pi-shaped streamSimple over @anthropic-ai/sdk). All native Claude Code logic (creds/signing/betas/transforms) is imported from @cgaravitoq/claude-code-core."
+		},
+		{
+			"name": "claude-code-core",
+			"type": "git",
+			"url": "https://github.com/cgaravitoq/claude-code-core",
+			"branch": "main",
+			"specialNotes": "Shared core consumed here for creds, signing, model-config and transforms. Update there, not here, when the Claude Code OAuth flow / billing header / betas change."
+		},
+		{
+			"name": "pi-ai",
+			"type": "npm",
+			"package": "@earendil-works/pi-ai",
+			"specialNotes": "Pi host SDK. Source of the provider/oauth/streamSimple contracts this extension implements: Api, Model, Context, AssistantMessageEventStream, createAssistantMessageEventStream, calculateCost, OAuthCredentials, OAuthLoginCallbacks."
+		},
+		{
+			"name": "pi-coding-agent",
+			"type": "npm",
+			"package": "@earendil-works/pi-coding-agent",
+			"specialNotes": "Pi coding-agent host. Source of ExtensionAPI and ProviderConfig used to register the provider."
+		}
+	]
+}

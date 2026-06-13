@@ -16,7 +16,7 @@
 import type { OAuthCredentials, OAuthLoginCallbacks } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-import { readClaudeCodeCreds, refreshClaudeCodeCreds } from "./claude-code-creds.ts";
+import { readClaudeCodeCreds, refreshClaudeCodeCreds } from "@cgaravitoq/claude-code-core";
 import { streamClaudeCodeAnthropic } from "./anthropic-stream.ts";
 
 const PROVIDER_ID = "claude-code";

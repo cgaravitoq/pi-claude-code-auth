@@ -93,16 +93,23 @@ The cost numbers pi displays come from public pricing tables. Actual billing for
 
 ## How it works
 
-1. **Credentials discovery** (`src/claude-code-creds.ts`) — macOS Keychain entries matching `Claude Code-credentials*`, then `~/.claude/.credentials.json`. Accepts both `claudeAiOauth.{accessToken, refreshToken, expiresAt}` and snake_case shapes.
-2. **Refresh** — when the token is within 60s of expiry, `POST https://claude.ai/v1/oauth/token` with the Claude Code client ID. If that fails (refresh token rotated, network), falls back to `claude -p . --model haiku`, which forces the Claude CLI to refresh its own session; then re-reads. Concurrent callers share one in-flight refresh promise. Writes are atomic (`*.tmp` + rename).
-3. **Payload reshape** (`src/transforms.ts`) — before each stream, mutates the Anthropic Messages params:
+The native Claude Code stack — credential discovery/refresh, the signed billing
+header, beta computation, and payload transforms — lives in
+[`@cgaravitoq/claude-code-core`](https://github.com/cgaravitoq/claude-code-core),
+shared with [`@cgaravitoq/open-langchain-ts`](https://github.com/cgaravitoq/open-langchain-ts).
+This extension is the Pi-specific glue around it (`src/index.ts` registers the
+provider; `src/anthropic-stream.ts` adapts the stream to Pi's `streamSimple`).
+
+1. **Credentials discovery** (`claude-code-core`) — macOS Keychain entries matching `Claude Code-credentials*`, then `~/.claude/.credentials.json`. Accepts both `claudeAiOauth.{accessToken, refreshToken, expiresAt}` and snake_case shapes.
+2. **Refresh** (`claude-code-core`) — when the token is within 60s of expiry, `POST https://claude.ai/v1/oauth/token` with the Claude Code client ID. If that fails (refresh token rotated, network), falls back to `claude -p . --model haiku`, which forces the Claude CLI to refresh its own session; then re-reads. Concurrent callers share one in-flight refresh promise. Writes are atomic (`*.tmp` + rename).
+3. **Payload reshape** (`claude-code-core` transforms) — before each stream, mutates the Anthropic Messages params:
    - Injects an `x-anthropic-billing-header` entry as `system[0]`.
    - Ensures `"You are Claude Code, Anthropic's official CLI for Claude."` is `system[1]` as a dedicated entry.
    - Moves every other system entry into the first user message.
    - Prefixes every tool name with `mcp_<PascalCase>` (e.g. `read` → `mcp_Read`) and rewrites `tool_use` blocks in history accordingly.
    - Strips `thinking.effort` for haiku.
    - Filters orphan `tool_use` / `tool_result` pairs.
-4. **Headers** (`src/anthropic-stream.ts`) — sends `anthropic-beta` (computed from `src/model-config.ts`, including `context-1m-2025-08-07` for Opus 4.8, Opus 4.7, and Sonnet 4.6), `user-agent`, `x-app: cli`, and `anthropic-dangerous-direct-browser-access: true`.
+4. **Headers** (`src/anthropic-stream.ts`) — sends `anthropic-beta` (computed by `claude-code-core`, including `context-1m-2025-08-07` for Opus 4.8, Opus 4.7, and Sonnet 4.6), `user-agent`, `x-app: cli`, and `anthropic-dangerous-direct-browser-access: true`.
 5. **Thinking blocks** — assistant `thinking` blocks from previous turns are dropped before send. The signature is bound to the original turn and cannot be revalidated; re-sending it causes the API to reject the request.
 
 ## Environment variables

@@ -328,6 +328,13 @@ export function streamClaudeCodeAnthropic(
 			const blocks = output.content as Block[];
 			const parseToolCallArguments = (block: Block) => {
 				if (block.type !== "toolCall") return;
+				// A tool call with no input streams an empty (or whitespace) partialJson;
+				// that means "no arguments", not a parse failure. Treat it as {}.
+				if (!block.partialJson || !block.partialJson.trim()) {
+					block.arguments = {};
+					delete block.argumentsParseError;
+					return;
+				}
 				try {
 					block.arguments = JSON.parse(block.partialJson);
 					delete block.argumentsParseError;
@@ -398,8 +405,9 @@ export function streamClaudeCodeAnthropic(
 							partial: output,
 						});
 					} else if (event.delta.type === "input_json_delta" && block.type === "toolCall") {
+						// Accumulate only; partial JSON is not valid mid-stream. Parse once
+						// at content_block_stop to avoid spurious parse failures.
 						(block as any).partialJson += event.delta.partial_json;
-						parseToolCallArguments(block);
 						stream.push({
 							type: "toolcall_delta",
 							contentIndex: index,

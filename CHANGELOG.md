@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.0] - 2026-07-03
+
+### Changed
+- Replace `claude-sonnet-4-6` with `claude-sonnet-5` (Claude Sonnet 5); pricing, 1M context, and 128k max output are unchanged
+
 ## [2.1.0] - 2026-05-29
 
 ### Changed

@@ -20,7 +20,7 @@ describe("provider registration", () => {
 		expect(models.find((model) => model.id === "claude-opus-4-7")).toEqual(
 			expect.objectContaining({ contextWindow: 1000000, maxTokens: 128000 }),
 		);
-		expect(models.find((model) => model.id === "claude-sonnet-4-6")).toEqual(
+		expect(models.find((model) => model.id === "claude-sonnet-5")).toEqual(
 			expect.objectContaining({ contextWindow: 1000000, maxTokens: 128000 }),
 		);
 		expect(models.find((model) => model.id === "claude-haiku-4-5")).toEqual(

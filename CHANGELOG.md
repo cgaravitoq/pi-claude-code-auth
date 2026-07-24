@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.4.0] - 2026-07-24
+
+### Added
+- Support for `claude-opus-5` (Claude Opus 5) and `claude-fable-5` (Claude Fable 5); both adaptive-thinking only, 1M context, 128k max output
+- Neither model gets the `context-1m-2025-08-07` beta: they ship 1M context by default
+
+### Fixed
+- Bump `@cgaravitoq/claude-code-core` to `^0.3.0`. The old `^0.1.0` range pinned 0.1.x, which had no `sonnet-5` override, so `claude-sonnet-5` fell back to `thinking.budget_tokens` and returned a 400 whenever reasoning was enabled
+
+### Notes
+- When no reasoning level is requested, no `thinking` field is sent. On Opus 5 and Fable 5 the model still thinks — adaptive is the default on Opus 5 and always-on on Fable 5. This is expected, not a bug
+
 ## [2.3.0] - 2026-07-03
 
 ### Changed

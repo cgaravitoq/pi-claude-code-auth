@@ -25,7 +25,7 @@ This package uses **non-public Anthropic protocol signals** (Claude Code billing
 **Bottom line**:
 
 - Installing this package may get your Claude account suspended.
-- Every time Anthropic ships a new server-side validator, this package can stop working until somebody updates the protocol constants in `src/model-config.ts`.
+- Every time Anthropic ships a new server-side validator, this package can stop working until somebody updates the protocol constants in `model-config.ts` in [`@cgaravitoq/claude-code-core`](https://github.com/cgaravitoq/claude-code-core).
 - This package is provided AS-IS under the MIT license, with no warranty, no commitment to keep it working, and no affiliation with Anthropic.
 - If you do not have an enterprise context where you can absorb a lost account, **do not install this**.
 
@@ -68,7 +68,7 @@ Inside pi:
 
 ```text
 /login claude-code
-/model claude-code/claude-opus-4-8
+/model claude-code/claude-opus-5
 ```
 
 `/login claude-code` materializes the discovered credentials into `~/.pi/agent/auth.json` (pi's own auth store). It does not open a browser — if no credentials are found it tells you to run `claude` first and aborts.
@@ -76,6 +76,9 @@ Inside pi:
 After that, switch models any time:
 
 ```text
+/model claude-code/claude-fable-5
+/model claude-code/claude-opus-4-8
+/model claude-code/claude-opus-4-7
 /model claude-code/claude-sonnet-5
 /model claude-code/claude-haiku-4-5
 ```
@@ -84,9 +87,11 @@ After that, switch models any time:
 
 | Model ID | Reasoning | Input | Context | Max output |
 |---|---|---|---|---|
+| `claude-opus-5` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
+| `claude-fable-5` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
 | `claude-opus-4-8` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
 | `claude-opus-4-7` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
-| `claude-sonnet-5` | yes | text, image | 1M | 128k |
+| `claude-sonnet-5` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
 | `claude-haiku-4-5` | no | text, image | 200k | 64k |
 
 The cost numbers pi displays come from public pricing tables. Actual billing for Claude Code OAuth requests is governed by your subscription, not by per-token costs.
@@ -109,14 +114,14 @@ provider; `src/anthropic-stream.ts` adapts the stream to Pi's `streamSimple`).
    - Prefixes every tool name with `mcp_<PascalCase>` (e.g. `read` → `mcp_Read`) and rewrites `tool_use` blocks in history accordingly.
    - Strips `thinking.effort` for haiku.
    - Filters orphan `tool_use` / `tool_result` pairs.
-4. **Headers** (`src/anthropic-stream.ts`) — sends `anthropic-beta` (computed by `claude-code-core`, including `context-1m-2025-08-07` for Opus 4.8, Opus 4.7, and Sonnet 5), `user-agent`, `x-app: cli`, and `anthropic-dangerous-direct-browser-access: true`.
+4. **Headers** (`src/anthropic-stream.ts`) — sends `anthropic-beta` (computed by `claude-code-core`, including `context-1m-2025-08-07` for Opus 4.8 and Opus 4.7; the Claude 5 models ship 1M context by default and do not need it), `user-agent`, `x-app: cli`, and `anthropic-dangerous-direct-browser-access: true`.
 5. **Thinking blocks** — assistant `thinking` blocks from previous turns are dropped before send. The signature is bound to the original turn and cannot be revalidated; re-sending it causes the API to reject the request.
 
 ## Environment variables
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `ANTHROPIC_CLI_VERSION` | `2.1.112` (from `src/model-config.ts`) | Version string embedded in the billing header and `user-agent`. Bump this when Anthropic stops accepting the pinned version. |
+| `ANTHROPIC_CLI_VERSION` | `2.1.112` (from `model-config.ts` in `@cgaravitoq/claude-code-core`) | Version string embedded in the billing header and `user-agent`. Bump this when Anthropic stops accepting the pinned version. |
 | `CLAUDE_CODE_ENTRYPOINT` | `sdk-cli` | Entrypoint string in the billing header and `user-agent`. |
 | `ANTHROPIC_USER_AGENT` | `claude-cli/<version> (external, <entrypoint>)` | Full override for the `user-agent` header. |
 
@@ -132,7 +137,7 @@ The request reached Anthropic but was not classified as a Claude Code session. U
 - The identity prefix (`system[1]`) was missing.
 - The `anthropic-beta` list is stale because Anthropic rotated betas.
 
-Bump `ANTHROPIC_CLI_VERSION` to whatever the latest `claude --version` reports. If still failing, the betas in `src/model-config.ts` likely need updating to match what the real Claude Code CLI sends.
+Bump `ANTHROPIC_CLI_VERSION` to whatever the latest `claude --version` reports. If still failing, the betas in `model-config.ts` in `@cgaravitoq/claude-code-core` likely need updating to match what the real Claude Code CLI sends.
 
 ### Signature error on thinking blocks
 
@@ -152,7 +157,7 @@ The OAuth refresh endpoint (`https://claude.ai/v1/oauth/token`) is the primary p
 
 ### Haiku ignores `effort` / `reasoning`
 
-Intentional. `src/model-config.ts` disables `effort` and excludes the interleaved-thinking beta for haiku, which does not support reasoning.
+Intentional. `model-config.ts` in `@cgaravitoq/claude-code-core` disables `effort` and excludes the interleaved-thinking beta for haiku, which does not support reasoning.
 
 ## Credits
 

@@ -21,6 +21,11 @@ import { streamClaudeCodeAnthropic } from "./anthropic-stream.ts";
 
 const PROVIDER_ID = "claude-code";
 const PROVIDER_NAME = "Claude Code (OAuth)";
+// Fable 5.1 is rejected unless the billing header reports Claude Code >= 2.1.251.
+const DEFAULT_CLI_VERSION = "2.1.257";
+if (!process.env.ANTHROPIC_CLI_VERSION) {
+	process.env.ANTHROPIC_CLI_VERSION = DEFAULT_CLI_VERSION;
+}
 
 async function login(callbacks: OAuthLoginCallbacks): Promise<OAuthCredentials> {
 	const existing = readClaudeCodeCreds();
@@ -66,6 +71,15 @@ export default function (pi: ExtensionAPI) {
 				reasoning: true,
 				input: ["text", "image"],
 				cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 },
+				contextWindow: 1000000,
+				maxTokens: 128000,
+			},
+			{
+				id: "claude-fable-5-1",
+				name: "Claude Fable 5.1 (Claude Code)",
+				reasoning: true,
+				input: ["text", "image"],
+				cost: { input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5 },
 				contextWindow: 1000000,
 				maxTokens: 128000,
 			},

@@ -76,6 +76,7 @@ Inside pi:
 After that, switch models any time:
 
 ```text
+/model claude-code/claude-fable-5-1
 /model claude-code/claude-fable-5
 /model claude-code/claude-opus-4-8
 /model claude-code/claude-opus-4-7
@@ -88,6 +89,7 @@ After that, switch models any time:
 | Model ID | Reasoning | Input | Context | Max output |
 |---|---|---|---|---|
 | `claude-opus-5` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
+| `claude-fable-5-1` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
 | `claude-fable-5` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
 | `claude-opus-4-8` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
 | `claude-opus-4-7` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
@@ -121,7 +123,7 @@ provider; `src/anthropic-stream.ts` adapts the stream to Pi's `streamSimple`).
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `ANTHROPIC_CLI_VERSION` | `2.1.112` (from `model-config.ts` in `@cgaravitoq/claude-code-core`) | Version string embedded in the billing header and `user-agent`. Bump this when Anthropic stops accepting the pinned version. |
+| `ANTHROPIC_CLI_VERSION` | `2.1.257` | Version string embedded in the billing header and `user-agent`. Defaults here (not the older `2.1.112` in `claude-code-core`) because Fable 5.1 requires Claude Code 2.1.251+. Bump this when Anthropic stops accepting the pinned version. |
 | `CLAUDE_CODE_ENTRYPOINT` | `sdk-cli` | Entrypoint string in the billing header and `user-agent`. |
 | `ANTHROPIC_USER_AGENT` | `claude-cli/<version> (external, <entrypoint>)` | Full override for the `user-agent` header. |
 

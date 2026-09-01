@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.5.0] - 2026-09-01
+
+### Added
+- Support for `claude-fable-5-1` (Claude Fable 5.1); adaptive-thinking, 1M context, 128k max output, same public pricing as Fable 5
+
+### Changed
+- Default `ANTHROPIC_CLI_VERSION` to `2.1.257` when unset. Anthropic rejects Fable 5.1 unless the billing header reports Claude Code 2.1.251 or newer; `@cgaravitoq/claude-code-core` still pins `2.1.112`
+
 ## [2.4.0] - 2026-07-24
 
 ### Added

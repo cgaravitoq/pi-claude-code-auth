@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.5.0] - 2026-09-08
+
+### Changed
+- Replace `claude-fable-5` with `claude-fable-5-1` (Claude Fable 5.1); same tier, 1M context, 128k max output, and $10/$50 per MTok
+- `claude-fable-5-1` reads cache at $0.25/MTok (0.025x base input) instead of the 0.1x every other model in the list uses
+
+### Fixed
+- Correct `claude-sonnet-5` pricing to $2/$10 per MTok. 2.3.0 carried over Sonnet 4.6's $3/$15
+
+### Notes
+- No `@cgaravitoq/claude-code-core` bump needed: `getModelOverride` matches by substring, so the existing `fable-5` override already resolves `claude-fable-5-1` to adaptive thinking
+- Fable 5.1 rejects forced `tool_choice` (`any` / `tool`) with a 400; this extension never sets it
+- Fable 5.1 is a Covered Model - an org or workspace without 30-day data retention gets a `400 invalid_request_error`
+- Verified end to end against the live API through pi: the Claude Code OAuth subscription does serve `claude-fable-5-1`, but the request must advertise Claude Code 2.1.251 or newer. `claude-code-core@0.3.0` reports `2.1.112` and gets `400 claude_code_version_too_old`; set `ANTHROPIC_CLI_VERSION` until `ccVersion` is bumped upstream
+
 ## [2.4.0] - 2026-07-24
 
 ### Added

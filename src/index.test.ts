@@ -18,7 +18,7 @@ describe("provider registration", () => {
 		expect(models.find((model) => model.id === "claude-opus-5")).toEqual(
 			expect.objectContaining({ contextWindow: 1000000, maxTokens: 128000 }),
 		);
-		expect(models.find((model) => model.id === "claude-fable-5")).toEqual(
+		expect(models.find((model) => model.id === "claude-fable-5-1")).toEqual(
 			expect.objectContaining({ contextWindow: 1000000, maxTokens: 128000 }),
 		);
 		expect(models.find((model) => model.id === "claude-opus-4-8")).toEqual(
@@ -36,7 +36,7 @@ describe("provider registration", () => {
 	});
 
 	test("Claude 5 models resolve to adaptive thinking", () => {
-		for (const modelId of ["claude-opus-5", "claude-fable-5", "claude-sonnet-5"]) {
+		for (const modelId of ["claude-opus-5", "claude-fable-5-1", "claude-sonnet-5"]) {
 			expect(getModelOverride(modelId)).toEqual(
 				expect.objectContaining({ adaptiveThinking: true }),
 			);

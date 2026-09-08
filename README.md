@@ -76,7 +76,7 @@ Inside pi:
 After that, switch models any time:
 
 ```text
-/model claude-code/claude-fable-5
+/model claude-code/claude-fable-5-1
 /model claude-code/claude-opus-4-8
 /model claude-code/claude-opus-4-7
 /model claude-code/claude-sonnet-5
@@ -88,11 +88,20 @@ After that, switch models any time:
 | Model ID | Reasoning | Input | Context | Max output |
 |---|---|---|---|---|
 | `claude-opus-5` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
-| `claude-fable-5` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
+| `claude-fable-5-1` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
 | `claude-opus-4-8` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
 | `claude-opus-4-7` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
 | `claude-sonnet-5` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
 | `claude-haiku-4-5` | no | text, image | 200k | 64k |
+
+`claude-fable-5-1` is gated on the Claude Code version the request advertises: the API requires
+2.1.251 or newer and returns `400 claude_code_version_too_old` otherwise.
+`@cgaravitoq/claude-code-core@0.3.0` still reports `2.1.112`, so until that is bumped upstream,
+start pi with `ANTHROPIC_CLI_VERSION` set to your installed `claude --version`:
+
+```sh
+ANTHROPIC_CLI_VERSION=$(claude --version | cut -d' ' -f1) pi
+```
 
 The cost numbers pi displays come from public pricing tables. Actual billing for Claude Code OAuth requests is governed by your subscription, not by per-token costs.
 

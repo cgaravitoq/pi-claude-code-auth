@@ -125,6 +125,7 @@ provider; `src/anthropic-stream.ts` adapts the stream to Pi's `streamSimple`).
 
 | Variable | Default | Purpose |
 |---|---|---|
+| `ANTHROPIC_CLI_VERSION` | `ccVersion` from `@cgaravitoq/claude-code-core` | Override the advertised Claude Code version if Anthropic's minimum rises above the pinned one. |
 | `CLAUDE_CODE_ENTRYPOINT` | `sdk-cli` | Entrypoint string in the billing header and `user-agent`. |
 | `ANTHROPIC_USER_AGENT` | `claude-cli/<version> (external, <entrypoint>)` | Full override for the `user-agent` header. |
 
@@ -140,7 +141,7 @@ The request reached Anthropic but was not classified as a Claude Code session. U
 - The identity prefix (`system[1]`) was missing.
 - The `anthropic-beta` list is stale because Anthropic rotated betas.
 
-Bump `@cgaravitoq/claude-code-core`. If still failing, the betas in `model-config.ts` in `@cgaravitoq/claude-code-core` likely need updating to match what the real Claude Code CLI sends.
+Bump `@cgaravitoq/claude-code-core`, or set `ANTHROPIC_CLI_VERSION` to your installed `claude --version` until it is bumped. If still failing, the betas in `model-config.ts` in `@cgaravitoq/claude-code-core` likely need updating to match what the real Claude Code CLI sends.
 
 ### Signature error on thinking blocks
 

@@ -96,7 +96,9 @@ After that, switch models any time:
 
 `claude-fable-5-1` is gated on the Claude Code version the request advertises: the API requires
 2.1.251 or newer and returns `400 claude_code_version_too_old` otherwise.
-`@cgaravitoq/claude-code-core@0.3.1` reports `2.1.267`, so the model works out of the box.
+The pinned `@cgaravitoq/claude-code-core` advertises a Claude Code version that satisfies this
+gate, so the model works out of the box; if you still see `claude_code_version_too_old`, bump the
+core dependency or set `ANTHROPIC_CLI_VERSION`.
 
 The cost numbers pi displays come from public pricing tables. Actual billing for Claude Code OAuth requests is governed by your subscription, not by per-token costs.
 

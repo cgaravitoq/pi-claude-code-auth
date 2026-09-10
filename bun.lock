@@ -6,7 +6,7 @@
       "name": "pi-claude-code-auth",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.40.0",
-        "@cgaravitoq/claude-code-core": "^0.3.0",
+        "@cgaravitoq/claude-code-core": "^0.3.1",
       },
       "devDependencies": {
         "@earendil-works/pi-ai": "*",
@@ -76,7 +76,7 @@
 
     "@babel/runtime": ["@babel/runtime@7.29.7", "", {}, "sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw=="],
 
-    "@cgaravitoq/claude-code-core": ["@cgaravitoq/claude-code-core@0.3.0", "", {}, "sha512-Z52emycQKUupQ7u4weUSwJQ8VqeDRi4QSbtBm9X+4x9g79FeruATMldfxsYV1uRCJDEqPPzkGVDHsTQfhc1O/g=="],
+    "@cgaravitoq/claude-code-core": ["@cgaravitoq/claude-code-core@0.3.1", "", {}, "sha512-26Zh4CD8gULACxCYJDyD4L0UpYDxbWuuMeYiuPQSqyJmOQ4Ui7KL9Pf17NA1fcLQ83vf50+FzzvKVVUEV4dOtQ=="],
 
     "@earendil-works/pi-agent-core": ["@earendil-works/pi-agent-core@0.76.0", "", { "dependencies": { "@earendil-works/pi-ai": "^0.76.0", "ignore": "7.0.5", "typebox": "1.1.38", "yaml": "2.9.0" } }, "sha512-gNfR+ScnyAKr/13K8129svRBwO48jIK4jBHZRLaj3l4inKRkCRyCGs6hZnyQCYeiVNbBt1Jcjvb7osss44Q9xw=="],
 

@@ -96,12 +96,7 @@ After that, switch models any time:
 
 `claude-fable-5-1` is gated on the Claude Code version the request advertises: the API requires
 2.1.251 or newer and returns `400 claude_code_version_too_old` otherwise.
-`@cgaravitoq/claude-code-core@0.3.0` still reports `2.1.112`, so until that is bumped upstream,
-start pi with `ANTHROPIC_CLI_VERSION` set to your installed `claude --version`:
-
-```sh
-ANTHROPIC_CLI_VERSION=$(claude --version | cut -d' ' -f1) pi
-```
+`@cgaravitoq/claude-code-core@0.3.1` reports `2.1.267`, so the model works out of the box.
 
 The cost numbers pi displays come from public pricing tables. Actual billing for Claude Code OAuth requests is governed by your subscription, not by per-token costs.
 
@@ -130,7 +125,6 @@ provider; `src/anthropic-stream.ts` adapts the stream to Pi's `streamSimple`).
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `ANTHROPIC_CLI_VERSION` | `2.1.112` (from `model-config.ts` in `@cgaravitoq/claude-code-core`) | Version string embedded in the billing header and `user-agent`. Bump this when Anthropic stops accepting the pinned version. |
 | `CLAUDE_CODE_ENTRYPOINT` | `sdk-cli` | Entrypoint string in the billing header and `user-agent`. |
 | `ANTHROPIC_USER_AGENT` | `claude-cli/<version> (external, <entrypoint>)` | Full override for the `user-agent` header. |
 
@@ -146,7 +140,7 @@ The request reached Anthropic but was not classified as a Claude Code session. U
 - The identity prefix (`system[1]`) was missing.
 - The `anthropic-beta` list is stale because Anthropic rotated betas.
 
-Bump `ANTHROPIC_CLI_VERSION` to whatever the latest `claude --version` reports. If still failing, the betas in `model-config.ts` in `@cgaravitoq/claude-code-core` likely need updating to match what the real Claude Code CLI sends.
+Bump `@cgaravitoq/claude-code-core`. If still failing, the betas in `model-config.ts` in `@cgaravitoq/claude-code-core` likely need updating to match what the real Claude Code CLI sends.
 
 ### Signature error on thinking blocks
 

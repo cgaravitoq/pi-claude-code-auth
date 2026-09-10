@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.5.1] - 2026-09-10
+
+### Fixed
+- Bump `@cgaravitoq/claude-code-core` to `^0.3.1`, which advertises Claude Code 2.1.267. The API requires 2.1.251 or newer for `claude-fable-5-1`, so the model now works out of the box and the `ANTHROPIC_CLI_VERSION` workaround is no longer needed
+
 ## [2.5.0] - 2026-09-08
 
 ### Changed

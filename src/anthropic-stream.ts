@@ -15,9 +15,10 @@ import {
 	type Api,
 	type AssistantMessage,
 	type AssistantMessageEventStream,
-	type Context,
 	calculateCost,
 	createAssistantMessageEventStream,
+	getCurrentSystemPrompt,
+	getCurrentTools,
 	type ImageContent,
 	type Message,
 	type Model,
@@ -28,6 +29,7 @@ import {
 	type Tool,
 	type ToolCall,
 	type ToolResultMessage,
+	type TranscriptContext,
 } from "@earendil-works/pi-ai";
 
 import {
@@ -214,10 +216,12 @@ function mapStopReason(reason: string): StopReason {
 
 export function streamClaudeCodeAnthropic(
 	model: Model<Api>,
-	context: Context,
+	context: TranscriptContext,
 	options?: SimpleStreamOptions,
 ): AssistantMessageEventStream {
 	const stream = createAssistantMessageEventStream();
+	const systemPrompt = getCurrentSystemPrompt(context.messages);
+	const tools = getCurrentTools(context.messages);
 
 	(async () => {
 		const output: AssistantMessage = {
@@ -276,16 +280,16 @@ export function streamClaudeCodeAnthropic(
 					cache_control: { type: "ephemeral" },
 				},
 			];
-			if (context.systemPrompt) {
+			if (systemPrompt) {
 				params.system.push({
 					type: "text",
-					text: sanitizeSurrogates(context.systemPrompt),
+					text: sanitizeSurrogates(systemPrompt),
 					cache_control: { type: "ephemeral" },
 				});
 			}
 
-			if (context.tools) {
-				params.tools = convertTools(context.tools);
+			if (tools.length > 0) {
+				params.tools = convertTools(tools);
 			}
 
 			// Handle thinking/reasoning
@@ -377,7 +381,7 @@ export function streamClaudeCodeAnthropic(
 						// Echoed name is mcp_<PascalCase>; strip the prefix, then resolve
 						// to the canonical pi tool name (case-insensitive lookup).
 						const stripped = unprefixToolName(event.content_block.name);
-						const resolved = fromClaudeCodeName(stripped, context.tools);
+						const resolved = fromClaudeCodeName(stripped, tools);
 						output.content.push({
 							type: "toolCall",
 							id: event.content_block.id,

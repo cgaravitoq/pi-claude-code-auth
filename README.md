@@ -50,7 +50,7 @@ Conceptually a port of [`griffinmartin/opencode-claude-auth`](https://github.com
 | You have logged in to Claude Code at least once (`claude`) | Provides the OAuth credentials this extension reads |
 | An active Claude Code subscription | Requests are billed against it |
 | Node `>= 22.19.0` | pi runtime requirement |
-| [pi](https://pi.dev) installed | This is a pi extension |
+| [pi](https://pi.dev) `>= 0.86.0` installed | Earlier versions pass the prompt and tools in a shape this extension no longer reads |
 
 If you have never run `claude` on this machine, do that first. There is nothing to reuse otherwise.
 

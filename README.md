@@ -50,7 +50,7 @@ Conceptually a port of [`griffinmartin/opencode-claude-auth`](https://github.com
 | You have logged in to Claude Code at least once (`claude`) | Provides the OAuth credentials this extension reads |
 | An active Claude Code subscription | Requests are billed against it |
 | Node `>= 22.19.0` | pi runtime requirement |
-| [pi](https://pi.dev) installed | This is a pi extension |
+| [pi](https://pi.dev) `>= 0.86.0` installed | Earlier versions pass the prompt and tools in a shape this extension no longer reads |
 
 If you have never run `claude` on this machine, do that first. There is nothing to reuse otherwise.
 
@@ -76,6 +76,7 @@ Inside pi:
 After that, switch models any time:
 
 ```text
+/model claude-code/claude-opus-5-5
 /model claude-code/claude-fable-5-1
 /model claude-code/claude-opus-4-8
 /model claude-code/claude-opus-4-7
@@ -87,6 +88,7 @@ After that, switch models any time:
 
 | Model ID | Reasoning | Input | Context | Max output |
 |---|---|---|---|---|
+| `claude-opus-5-5` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
 | `claude-opus-5` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
 | `claude-fable-5-1` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
 | `claude-opus-4-8` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
@@ -94,10 +96,11 @@ After that, switch models any time:
 | `claude-sonnet-5` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
 | `claude-haiku-4-5` | no | text, image | 200k | 64k |
 
-`claude-fable-5-1` is gated on the Claude Code version the request advertises: the API requires
-2.1.251 or newer and returns `400 claude_code_version_too_old` otherwise.
+`claude-opus-5-5` and `claude-fable-5-1` are gated on the Claude Code version the request advertises:
+the API requires 2.1.280 or newer for `claude-opus-5-5` (2.1.251 for `claude-fable-5-1`) and returns
+`400 claude_code_version_too_old` otherwise.
 The pinned `@cgaravitoq/claude-code-core` advertises a Claude Code version that satisfies this
-gate, so the model works out of the box; if you still see `claude_code_version_too_old`, bump the
+gate, so the models work out of the box; if you still see `claude_code_version_too_old`, bump the
 core dependency or set `ANTHROPIC_CLI_VERSION`.
 
 The cost numbers pi displays come from public pricing tables. Actual billing for Claude Code OAuth requests is governed by your subscription, not by per-token costs.

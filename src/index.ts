@@ -61,6 +61,16 @@ export default function (pi: ExtensionAPI) {
 		api: "anthropic-messages",
 		models: [
 			{
+				id: "claude-opus-5-5",
+				name: "Claude Opus 5.5 (Claude Code)",
+				reasoning: true,
+				input: ["text", "image"],
+				// Opus 5.5 reads cache at 0.05x base input, not the 0.1x most models here use.
+				cost: { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 5 },
+				contextWindow: 1000000,
+				maxTokens: 128000,
+			},
+			{
 				id: "claude-opus-5",
 				name: "Claude Opus 5 (Claude Code)",
 				reasoning: true,

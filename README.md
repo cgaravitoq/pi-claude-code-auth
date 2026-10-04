@@ -80,7 +80,7 @@ After that, switch models any time:
 /model claude-code/claude-fable-5-1
 /model claude-code/claude-opus-4-8
 /model claude-code/claude-opus-4-7
-/model claude-code/claude-sonnet-5
+/model claude-code/claude-sonnet-5-5
 /model claude-code/claude-haiku-4-5
 ```
 
@@ -93,7 +93,7 @@ After that, switch models any time:
 | `claude-fable-5-1` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
 | `claude-opus-4-8` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
 | `claude-opus-4-7` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
-| `claude-sonnet-5` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
+| `claude-sonnet-5-5` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
 | `claude-haiku-4-5` | no | text, image | 200k | 64k |
 
 `claude-opus-5-5` and `claude-fable-5-1` are gated on the Claude Code version the request advertises:

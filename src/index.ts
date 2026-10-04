@@ -108,8 +108,8 @@ export default function (pi: ExtensionAPI) {
 				maxTokens: 128000,
 			},
 			{
-				id: "claude-sonnet-5",
-				name: "Claude Sonnet 5 (Claude Code)",
+				id: "claude-sonnet-5-5",
+				name: "Claude Sonnet 5.5 (Claude Code)",
 				reasoning: true,
 				input: ["text", "image"],
 				cost: { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 2.5 },

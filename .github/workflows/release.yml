@@ -1,0 +1,95 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "npmjs version to mirror to GitHub Packages, e.g. 2.6.0"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  packages: write
+
+env:
+  PACKAGE: "@cgaravitoq/pi-claude-code-auth"
+
+jobs:
+  release:
+    name: Release
+    runs-on: runs-on=${{ github.run_id }}-release/runner=x64-2cpu
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Resolve version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            version=$(node -p "require('./package.json').version")
+            if [ "${GITHUB_REF_NAME#v}" != "$version" ]; then
+              echo "::error title=Tag and package.json disagree::$GITHUB_REF_NAME is not version $version"
+              exit 1
+            fi
+          else
+            version="$INPUT_VERSION"
+            if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error title=Invalid version input::expected a version like 2.6.0, got '$version'"
+              exit 1
+            fi
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to npmjs
+        if: github.event_name == 'push'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          if npm view "$PACKAGE@$VERSION" version --registry https://registry.npmjs.org >/dev/null 2>&1; then
+            echo "npmjs already serves $PACKAGE@$VERSION"
+            exit 0
+          fi
+          npm publish --access public --registry https://registry.npmjs.org || {
+            echo "::error title=npmjs publish failed::If the output above is a 404, npmjs.com has no trusted publisher for $PACKAGE yet. Add one for repository $GITHUB_REPOSITORY and workflow release.yml at https://www.npmjs.com/package/$PACKAGE/access"
+            exit 1
+          }
+
+      # GitHub Packages has no OIDC trusted publishing, so it authenticates with GITHUB_TOKEN, and it
+      # is fed the tarball npmjs serves (npm pack of the published version, bytes unchanged) rather
+      # than a second build, so a consumer pinned to either registry installs the same artifact.
+      - name: Mirror to GitHub Packages
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          NODE_AUTH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          npmrc="$RUNNER_TEMP/github-packages.npmrc"
+          echo "//npm.pkg.github.com/:_authToken=$NODE_AUTH_TOKEN" > "$npmrc"
+          export NPM_CONFIG_USERCONFIG="$npmrc"
+          if npm view "$PACKAGE@$VERSION" version --registry https://npm.pkg.github.com >/dev/null 2>&1; then
+            echo "GitHub Packages already serves $PACKAGE@$VERSION"
+            exit 0
+          fi
+          dir=$(mktemp -d)
+          tarball=$(npm pack "$PACKAGE@$VERSION" --registry https://registry.npmjs.org --pack-destination "$dir" | tail -n 1)
+          npm publish "$dir/$(basename "$tarball")" --registry https://npm.pkg.github.com

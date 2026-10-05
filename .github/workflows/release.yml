@@ -22,7 +22,7 @@ env:
 jobs:
   release:
     name: Release
-    runs-on: runs-on=${{ github.run_id }}-release/runner=x64-2cpu
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7

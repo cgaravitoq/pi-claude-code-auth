@@ -90,6 +90,16 @@ jobs:
             echo "GitHub Packages already serves $PACKAGE@$VERSION"
             exit 0
           fi
+          attempt=1
+          until npm view "$PACKAGE@$VERSION" version --registry https://registry.npmjs.org >/dev/null 2>&1; do
+            if [ "$attempt" -ge 30 ]; then
+              echo "::error title=Version missing on npmjs::$PACKAGE@$VERSION is not on npmjs after 10 minutes, so there are no bytes to mirror"
+              exit 1
+            fi
+            echo "waiting for npmjs to serve $PACKAGE@$VERSION"
+            attempt=$((attempt + 1))
+            sleep 20
+          done
           dir=$(mktemp -d)
           tarball=$(npm pack "$PACKAGE@$VERSION" --registry https://registry.npmjs.org --pack-destination "$dir" | tail -n 1)
           npm publish "$dir/$(basename "$tarball")" --registry https://npm.pkg.github.com

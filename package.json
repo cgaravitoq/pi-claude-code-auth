@@ -41,7 +41,7 @@
 	},
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.40.0",
-		"@cgaravitoq/claude-code-core": "^0.3.2"
+		"@cgaravitoq/claude-code-core": "^0.3.3"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-ai": ">=0.86.0",

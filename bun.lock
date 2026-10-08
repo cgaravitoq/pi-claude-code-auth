@@ -6,7 +6,7 @@
       "name": "pi-claude-code-auth",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.40.0",
-        "@cgaravitoq/claude-code-core": "^0.3.2",
+        "@cgaravitoq/claude-code-core": "^0.3.3",
       },
       "devDependencies": {
         "@earendil-works/pi-ai": "*",
@@ -64,7 +64,7 @@
 
     "@babel/runtime": ["@babel/runtime@7.29.7", "", {}, "sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw=="],
 
-    "@cgaravitoq/claude-code-core": ["@cgaravitoq/claude-code-core@0.3.2", "", {}, "sha512-S+I+jw4DpiiJ470jo7Xt45pt+t1qU2mLyhIoYo0iB9aw7QhdDK/JxZ2g3sxkRpCR4QRtbvVgV0i8qAlFOs3efg=="],
+    "@cgaravitoq/claude-code-core": ["@cgaravitoq/claude-code-core@0.3.3", "", {}, "sha512-xctRFz0gq3stPXorA32ou94+MSOOMIOipcB1uXDhMp45SvWzW34ZJBa7hwdw9iDbzQyvH1F/Fv22wX/qdV99Jg=="],
 
     "@earendil-works/chord": ["@earendil-works/chord@0.87.1", "", { "dependencies": { "esbuild": "0.28.2" } }, "sha512-bg7IkJGFcEaMqqYgOGUiq5Ky9RghpRfrlZ8I/v/1b4bBZ02A7t3E+6uhPRbadwWb/kWsnVFbZsqOKRN4a3LLCg=="],
 

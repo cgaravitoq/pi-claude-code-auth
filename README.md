@@ -81,7 +81,7 @@ After that, switch models any time:
 /model claude-code/claude-opus-4-8
 /model claude-code/claude-opus-4-7
 /model claude-code/claude-sonnet-5-5
-/model claude-code/claude-haiku-4-5
+/model claude-code/claude-haiku-5-5
 ```
 
 ## Models supported
@@ -94,7 +94,7 @@ After that, switch models any time:
 | `claude-opus-4-8` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
 | `claude-opus-4-7` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
 | `claude-sonnet-5-5` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
-| `claude-haiku-4-5` | no | text, image | 200k | 64k |
+| `claude-haiku-5-5` | yes (adaptive; low, medium, high, xhigh, max) | text, image | 1M | 128k |
 
 `claude-opus-5-5` and `claude-fable-5-1` are gated on the Claude Code version the request advertises:
 the API requires 2.1.280 or newer for `claude-opus-5-5` (2.1.251 for `claude-fable-5-1`) and returns
@@ -103,7 +103,7 @@ The pinned `@cgaravitoq/claude-code-core` advertises a Claude Code version that 
 gate, so the models work out of the box; if you still see `claude_code_version_too_old`, bump the
 core dependency or set `ANTHROPIC_CLI_VERSION`.
 
-The cost numbers pi displays come from public pricing tables. Actual billing for Claude Code OAuth requests is governed by your subscription, not by per-token costs.
+The cost numbers pi displays come from public pricing tables. `claude-haiku-5-5` is priced by prompt length, so pi applies its higher rates to any request over 100K input tokens. Actual billing for Claude Code OAuth requests is governed by your subscription, not by per-token costs.
 
 ## How it works
 
@@ -121,7 +121,7 @@ provider; `src/anthropic-stream.ts` adapts the stream to Pi's `streamSimple`).
    - Ensures `"You are Claude Code, Anthropic's official CLI for Claude."` is `system[1]` as a dedicated entry.
    - Moves every other system entry into the first user message.
    - Prefixes every tool name with `mcp_<PascalCase>` (e.g. `read` → `mcp_Read`) and rewrites `tool_use` blocks in history accordingly.
-   - Strips `thinking.effort` for haiku.
+   - Strips `thinking.effort` for Haiku 4.5 and older.
    - Filters orphan `tool_use` / `tool_result` pairs.
 4. **Headers** (`src/anthropic-stream.ts`) — sends `anthropic-beta` (computed by `claude-code-core`, including `context-1m-2025-08-07` for Opus 4.8 and Opus 4.7; the Claude 5 models ship 1M context by default and do not need it), `user-agent`, `x-app: cli`, and `anthropic-dangerous-direct-browser-access: true`.
 5. **Thinking blocks** — `thinking` blocks from earlier turns are replayed with their signatures when they came from the model being called, and dropped when they came from another model, because a signature only validates on the model that produced it. Dropping the same model's thinking mid tool loop makes it lose its plan and garble its final answer. Fable 5.1, Opus 5.5, Sonnet 5.5 and Haiku 5.5 also bind each signature to the conversation before it, which holds because the history this extension sends is append-only.
@@ -163,10 +163,6 @@ The OAuth refresh endpoint (`https://claude.ai/v1/oauth/token`) is the primary p
 - Run `claude` manually and let it re-login.
 - Check that `claude` is on `$PATH` for the shell pi was launched from (`command -v claude`).
 - Verify `~/.claude/.credentials.json` exists and is readable.
-
-### Haiku ignores `effort` / `reasoning`
-
-Intentional. `model-config.ts` in `@cgaravitoq/claude-code-core` disables `effort` and excludes the interleaved-thinking beta for haiku, which does not support reasoning.
 
 ## Credits
 

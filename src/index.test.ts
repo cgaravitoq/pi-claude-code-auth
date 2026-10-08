@@ -33,13 +33,13 @@ describe("provider registration", () => {
 		expect(models.find((model) => model.id === "claude-sonnet-5-5")).toEqual(
 			expect.objectContaining({ contextWindow: 1000000, maxTokens: 128000 }),
 		);
-		expect(models.find((model) => model.id === "claude-haiku-4-5")).toEqual(
-			expect.objectContaining({ contextWindow: 200000, maxTokens: 64000 }),
+		expect(models.find((model) => model.id === "claude-haiku-5-5")).toEqual(
+			expect.objectContaining({ contextWindow: 1000000, maxTokens: 128000 }),
 		);
 	});
 
 	test("Claude 5 models resolve to adaptive thinking", () => {
-		for (const modelId of ["claude-opus-5-5", "claude-opus-5", "claude-fable-5-1", "claude-sonnet-5-5"]) {
+		for (const modelId of ["claude-opus-5-5", "claude-opus-5", "claude-fable-5-1", "claude-sonnet-5-5", "claude-haiku-5-5"]) {
 			expect(getModelOverride(modelId)).toEqual(
 				expect.objectContaining({ adaptiveThinking: true }),
 			);

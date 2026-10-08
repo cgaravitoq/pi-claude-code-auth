@@ -100,7 +100,7 @@ function convertContentBlocks(
 	return blocks;
 }
 
-function convertMessages(messages: Message[]): any[] {
+function convertMessages(messages: Message[], model: Model<Api>): any[] {
 	const params: any[] = [];
 
 	for (let i = 0; i < messages.length; i++) {
@@ -125,14 +125,22 @@ function convertMessages(messages: Message[]): any[] {
 				}
 			}
 		} else if (msg.role === "assistant") {
+			const isSameModel = msg.provider === model.provider && msg.api === model.api && msg.model === model.id;
 			const blocks: ContentBlockParam[] = [];
 			for (const block of msg.content) {
 				if (block.type === "text" && block.text.trim()) {
 					blocks.push({ type: "text", text: sanitizeSurrogates(block.text) });
 				} else if (block.type === "thinking") {
-					// Skip: re-sending thinking blocks fails with claude-code beta because
-					// the signature is bound to the original turn and cannot be revalidated.
-					continue;
+					// A thinking signature only validates on the model that produced it, so
+					// another model's thinking is dropped. Dropping the same model's thinking
+					// mid tool loop makes it lose its plan and garble the final answer.
+					if (isSameModel && block.thinkingSignature) {
+						blocks.push({
+							type: "thinking",
+							thinking: sanitizeSurrogates(block.thinking),
+							signature: block.thinkingSignature,
+						});
+					}
 				} else if (block.type === "toolCall") {
 					blocks.push({
 						type: "tool_use",
@@ -143,7 +151,7 @@ function convertMessages(messages: Message[]): any[] {
 				}
 			}
 			if (blocks.length === 0) {
-				// Preserve role alternation when thinking blocks are stripped.
+				// Preserve role alternation when another model's thinking is stripped.
 				// Text must be non-empty: the API rejects empty text blocks with 400.
 				blocks.push({ type: "text", text: "(no content)" });
 			}
@@ -267,7 +275,7 @@ export function streamClaudeCodeAnthropic(
 			// Build request params
 			let params: MessageCreateParamsStreaming = {
 				model: model.id,
-				messages: convertMessages(context.messages),
+				messages: convertMessages(context.messages, model),
 				max_tokens: options?.maxTokens || Math.floor(model.maxTokens / 3),
 				stream: true,
 			};

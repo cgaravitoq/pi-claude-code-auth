@@ -124,7 +124,7 @@ provider; `src/anthropic-stream.ts` adapts the stream to Pi's `streamSimple`).
    - Strips `thinking.effort` for haiku.
    - Filters orphan `tool_use` / `tool_result` pairs.
 4. **Headers** (`src/anthropic-stream.ts`) — sends `anthropic-beta` (computed by `claude-code-core`, including `context-1m-2025-08-07` for Opus 4.8 and Opus 4.7; the Claude 5 models ship 1M context by default and do not need it), `user-agent`, `x-app: cli`, and `anthropic-dangerous-direct-browser-access: true`.
-5. **Thinking blocks** — assistant `thinking` blocks from previous turns are dropped before send. The signature is bound to the original turn and cannot be revalidated; re-sending it causes the API to reject the request.
+5. **Thinking blocks** — `thinking` blocks from earlier turns are replayed with their signatures when they came from the model being called, and dropped when they came from another model, because a signature only validates on the model that produced it. Dropping the same model's thinking mid tool loop makes it lose its plan and garble its final answer. Fable 5.1, Opus 5.5, Sonnet 5.5 and Haiku 5.5 also bind each signature to the conversation before it, which holds because the history this extension sends is append-only.
 
 ## Environment variables
 
@@ -150,7 +150,7 @@ Bump `@cgaravitoq/claude-code-core`, or set `ANTHROPIC_CLI_VERSION` to your inst
 
 ### Signature error on thinking blocks
 
-This extension already drops thinking blocks from prior assistant turns before sending. If you still see the error, you probably have a custom pi flow that re-injects thinking content elsewhere — strip `thinking` blocks before they reach the provider.
+A 400 saying a `thinking` block "is bound to a different conversation" means something rewrote an earlier turn between requests: a custom pi flow that edits, trims or reorders history, or a proxy that changes the request. Keep the history append-only, or strip `thinking` blocks before they reach the provider.
 
 ### `Claude Code credentials not found`
 

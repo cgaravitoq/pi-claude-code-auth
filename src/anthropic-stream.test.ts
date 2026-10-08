@@ -2,12 +2,15 @@ import { expect, mock, test } from "bun:test";
 import { type Model, normalizeContext } from "@earendil-works/pi-ai";
 
 let streamParams: any;
+let streamEvents: unknown[] = [];
 mock.module("@anthropic-ai/sdk", () => ({
 	default: class {
 		messages = {
 			stream: (params: unknown) => {
 				streamParams = params;
-				return (async function* () {})();
+				return (async function* () {
+					yield* streamEvents;
+				})();
 			},
 		};
 	},
@@ -96,4 +99,41 @@ test("replays thinking only from the model being called", async () => {
 		.flatMap((message: { content: unknown }) => (Array.isArray(message.content) ? message.content : []))
 		.filter((block: { type: string }) => block.type === "thinking");
 	expect(thinking).toEqual([{ type: "thinking", thinking: "", signature: "SAME_MODEL_SIGNATURE" }]);
+});
+
+test("surfaces a refusal as an error carrying its explanation", async () => {
+	streamEvents = [
+		{ type: "message_start", message: { usage: { input_tokens: 10, output_tokens: 0 } } },
+		{
+			type: "message_delta",
+			delta: {
+				stop_reason: "refusal",
+				stop_details: { type: "refusal", category: "cyber", explanation: "REFUSAL_EXPLANATION" },
+			},
+			usage: { output_tokens: 1 },
+		},
+	];
+	const context = normalizeContext({ messages: [{ role: "user", content: "hi", timestamp: 0 }] });
+	const model = {
+		id: "claude-haiku-5-5",
+		api: "anthropic-messages",
+		provider: "claude-code",
+		baseUrl: "https://api.anthropic.com",
+		reasoning: true,
+		maxTokens: 128000,
+		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+	} as Model<"anthropic-messages">;
+
+	const events: any[] = [];
+	for await (const event of streamClaudeCodeAnthropic(model, context, { apiKey: "token" })) {
+		events.push(event);
+	}
+	streamEvents = [];
+
+	expect(events.at(-1)).toEqual(
+		expect.objectContaining({
+			type: "error",
+			error: expect.objectContaining({ stopReason: "error", errorMessage: "REFUSAL_EXPLANATION" }),
+		}),
+	);
 });

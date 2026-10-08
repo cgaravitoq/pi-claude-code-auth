@@ -446,8 +446,15 @@ export function streamClaudeCodeAnthropic(
 						stream.push({ type: "toolcall_end", contentIndex: index, toolCall: block, partial: output });
 					}
 				} else if (event.type === "message_delta") {
-					if ((event.delta as any).stop_reason) {
-						output.stopReason = mapStopReason((event.delta as any).stop_reason);
+					const stopReason = (event.delta as any).stop_reason;
+					if (stopReason) {
+						output.stopReason = mapStopReason(stopReason);
+						if (output.stopReason === "error") {
+							output.errorMessage =
+								stopReason === "refusal"
+									? (event.delta as any).stop_details?.explanation || "The model refused to complete the request"
+									: `Unhandled stop reason: ${stopReason}`;
+						}
 					}
 					if (typeof (event.usage as any).output_tokens === "number") {
 						output.usage.output = (event.usage as any).output_tokens;
@@ -458,6 +465,7 @@ export function streamClaudeCodeAnthropic(
 				}
 			}
 
+			if (output.stopReason === "error") throw new Error(output.errorMessage);
 			stream.push({ type: "done", reason: output.stopReason as "stop" | "length" | "toolUse", message: output });
 			stream.end();
 		} catch (error) {

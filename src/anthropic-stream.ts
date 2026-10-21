@@ -305,7 +305,7 @@ export function streamClaudeCodeAnthropic(
 				if (getModelOverride(model.id)?.adaptiveThinking) {
 					// Adaptive-thinking models (Opus 4.8+): manual budget_tokens is
 					// rejected with a 400. Thinking depth is driven by effort instead.
-					params.thinking = { type: "adaptive" } as any;
+					params.thinking = { type: "adaptive", display: "summarized" } as any;
 					(params as any).output_config = { effort: toEffort(options.reasoning) };
 				} else {
 					const defaultBudgets: Record<string, number> = {

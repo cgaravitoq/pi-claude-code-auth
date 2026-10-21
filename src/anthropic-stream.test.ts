@@ -45,6 +45,24 @@ test("sends the prompt and tools carried by the transcript's system messages", a
 	expect(JSON.stringify([streamParams.system, streamParams.messages])).toContain("PI_SYSTEM_PROMPT");
 });
 
+test("asks an adaptive-thinking model to stream its thinking summarized", async () => {
+	streamEvents = [];
+	const context = normalizeContext({ messages: [{ role: "user", content: "hi", timestamp: 0 }] });
+	const model = {
+		id: "claude-opus-5-5",
+		api: "anthropic-messages",
+		provider: "claude-code",
+		baseUrl: "https://api.anthropic.com",
+		reasoning: true,
+		maxTokens: 128000,
+	} as Model<"anthropic-messages">;
+
+	for await (const _event of streamClaudeCodeAnthropic(model, context, { apiKey: "token", reasoning: "medium" })) {
+	}
+
+	expect(streamParams.thinking).toEqual({ type: "adaptive", display: "summarized" });
+});
+
 test("replays thinking only from the model being called", async () => {
 	const assistant = (model: string, signature: string, toolCallId: string) => ({
 		role: "assistant" as const,
